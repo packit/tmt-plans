@@ -1,0 +1,28 @@
+summary: Run rpminspect on all srpm and binary rpms
+
+description: |
+  Equivalent to bohdi job running https://github.com/fedora-ci/rpminspect-pipeline
+
+# Update data package
+# dnf update --disablerepo="fedora*" -y ${RPMINSPECT_PACKAGE_NAME} ${RPMINSPECT_DATA_PACKAGE_NAME} > update_rpminspect.log 2>&1 || :
+
+prepare:
+  - name: Get necessary packages
+    how: install
+    package:
+      # TODO: Maybe this can be altered to use rpminspect container?
+      - rpminspect
+      # TODO: Use adjust to get the appropriate rpminspect
+      - rpminspect-data-fedora
+      - koji
+      - clamav-freshclam
+      - tree
+  - name: Get other files from repo
+    how: shell
+    script: >
+      curl --silent --show-error --fail --retry 5 
+      --output "$TMT_PLAN_DATA/viewer.html"
+      https://raw.githubusercontent.com/rpminspect/rpminspect/main/contrib/viewer.html
+
+discover+:
+  filter: "tag: rpminspect"
