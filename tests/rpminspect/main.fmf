@@ -1,0 +1,5 @@
+summary: Run rpminspect
+tag: rpminspect
+
+test+: rpminspect.sh
+result: custom
