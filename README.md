@@ -8,6 +8,7 @@ script.
 ## Quick-start
 
 In order to import such tests, simply define a tmt plan with the content:
+
 ```yaml
 plan:
   import:

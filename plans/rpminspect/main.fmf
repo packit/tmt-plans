@@ -20,7 +20,7 @@ prepare:
   - name: Get other files from repo
     how: shell
     script: >
-      curl --silent --show-error --fail --retry 5 
+      curl --silent --show-error --fail --retry 5
       --output "$TMT_PLAN_DATA/viewer.html"
       https://raw.githubusercontent.com/rpminspect/rpminspect/main/contrib/viewer.html
 
