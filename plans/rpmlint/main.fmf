@@ -9,6 +9,10 @@ prepare:
     package:
       - rpmlint
       - tree
+  - name: Copy rpmlint toml configuration file
+    how: shell
+    script: cp plans/rpmlint/packit.toml $TMT_PLAN_DATA/packit.toml
+  # TODO: How to get the .rpmlintrc files?
 
 discover+:
   filter: "tag: rpmlint"
