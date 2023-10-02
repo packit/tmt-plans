@@ -45,3 +45,18 @@ repos:
         args:
           - https://github.com/packit/tmt-plans.git
         stages: [manual, push]
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.17
+    hooks:
+      - id: mdformat
+        additional_dependencies:
+          - mdformat-gfm
+          - mdformat-tables
+  - repo: https://github.com/teemtee/tmt
+    rev: 1.27.0
+    hooks:
+      - id: tmt-lint
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.27.0
+    hooks:
+      - id: check-github-actions
