@@ -21,6 +21,6 @@ You can alter the inputs of this plan through environment variables.
 ## Plans available
 
 - Plans equivalent with jobs run on `bohdi`
-  - [ ] `/rpminspect`
+  - [`/plans/rpminspect`](plans/rpminspect)
   - [ ] `/rpmdeplint`
   - [ ] `/installability`
