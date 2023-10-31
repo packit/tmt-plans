@@ -43,35 +43,35 @@ Some functionalities like automatically determining `previous_build` are only av
 
 : :::note
 
-  Not yet implemented
+Not yet implemented
 
-  :::
+:::
 
-  Run `rpminspect` on the specified Koji build instead of the expected Copr project
+Run `rpminspect` on the specified Koji build instead of the expected Copr project
 
 `RPMINSPECT_TESTS`
 
 : Run only the specified inspections. This option has precedence over `RPMINSPECT_EXCLUDE`.
 
-  See `rpminspect -l` for a list of available tests.
+See `rpminspect -l` for a list of available tests.
 
 `RPMINSPECT_EXCLUDE` \[Default: `metadata`\]
 
 : Exclude the specified inspections. This option has no effect if `RPMINSPECT_TESTS` is specified.
 
-  See `rpminspect -l` for a list of available tests.
+See `rpminspect -l` for a list of available tests.
 
 `RPMINPSECT_ARCHES`
 
 : Run inspection only on the specified architecture packages
 
-  ::: note
+::: note
 
-  Keep in mind the architectures available in the testing-farm runner that runs this job.
+Keep in mind the architectures available in the testing-farm runner that runs this job.
 
-  Also note that `src`, and `noarch` are also considered "architectures" in this context.
+Also note that `src`, and `noarch` are also considered "architectures" in this context.
 
-  :::
+:::
 
 ## Examples
 
