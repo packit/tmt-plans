@@ -14,9 +14,26 @@ plans:
     name: /plans/rpmlint
 ```
 
+## Description
+
+This plan simply runs the command
+
+```console
+$ rpmlint ./*.rpm
+```
+
+Currently, there is no support to pass in additional `.rpmlintrc` due to limitations of the [`tmt`][tmt-import]
+interface. The `rpm` and `srpm` artifacts are taken from the testing-farm artifacts
+
+:::note
+
+The rpmlint of the `.spec` file is handled automatically when running `rpmlint` against a `srpm`.
+
+:::
+
 ## Options
 
-None so far
+No options available
 
 ## Examples
 
@@ -36,3 +53,4 @@ None so far
 <!-- SPHINX-END -->
 
 [rpmlint]: https://github.com/rpm-software-management/rpmlint
+[tmt-import]: https://tmt.readthedocs.io/en/stable/spec/plans.html#import-plans
