@@ -24,3 +24,5 @@ You can alter the inputs of this plan through environment variables.
   - [ ] `/rpminspect`
   - [ ] `/rpmdeplint`
   - [ ] `/installability`
+- Other plans
+  - [`/plans/rpmlint`](plans/rpmlint)

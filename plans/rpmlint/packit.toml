@@ -1,0 +1,4 @@
+Filters = [
+    # Avoid copr signing issues
+    "unknown-key",
+]
