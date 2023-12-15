@@ -25,9 +25,16 @@ rlJournalStart
 				rlRun -s "/usr/bin/koji list-tagged --latest --inherit --quiet f${VERSION_ID} ${PACKIT_PACKAGE_NAME}" 0 "Get latest koji build"
 				rlRun "latest_build=\$(cat $rlRun_LOG | sed 's/\s.*//')" 0 "Resolve latest_build variable"
 				if [[ -n "$latest_build" ]]; then
-					# If the package is already uploaded downstream
+					## If the package is already uploaded downstream
+					# Default and required options
+					args="-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/fedora.yaml}"
+					# Fetch and write to ./inspect_builds
+					args="$args -f  -w ./inspect_builds"
+					# Specify the architectures
 					# TODO: Should have a better way to get the current arch to cover emulated and other cases
-					rlRun "/usr/bin/rpminspect -v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/fedora.yaml} -f -w ./inspect_builds --arches=src,noarch,$(arch) $latest_build" 0 "Downloading latest koji builds"
+					args="$args --arches=src,noarch,$(arch)"
+     					args="$args $latest_build"
+					rlRun "/usr/bin/rpminspect $args" 0 "Downloading latest koji builds"
 				fi
 			else
 				rlFail "Not implemented for tags other than fedora"
@@ -42,18 +49,28 @@ rlJournalStart
 		done
 		rlRun "tree ./inspect_builds"
 
-		# Do actual rpminspect
-		args=""
-		args="$args -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/fedora.yaml}"
-		args="$args --output=${TMT_TEST_DATA}/result.json --format=json"
-		args="$args --verbose"
-		# TODO: Only exclude if running with copr
-		args="$args --exclude=metadata"
-		args="$args ${ARCHES:+--arches=$ARCHES}"
-		args="$args ${RPMINSPECT_TESTS:+--tests=$RPMINSPECT}"
-		if [[ -n "$latest_build" ]]; then
-			args="$args ./inspect_builds/$latest_build"
+		## Do actual rpminspect
+		# Default and required options
+		args="-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/fedora.yaml}"
+		# Output the data to json so that it can be displayed
+		args="$args --output=$TMT_TEST_DATA/result.json --format=json"
+		# Specify the test to run
+		if [[ -n "$RPMINSPECT_TESTS" ]]; then
+			# Run only specified tests. Takes precedence over --exclude
+			args="$args --tests=$RPMINSPECT_TESTS"
+		elif [[ -n "$RPMINSPECT_EXCLUDE" ]]; then
+			# Exclude test lists given. Only run if there is no RPMINSPECT_TESTS
+		 	args="$args --exclude=${RPMINSPECT_EXCLUDE:-metadata}"
+		else
+			# TODO: Only exclude metadata if running with copr
+			# https://tmt.readthedocs.io/en/stable/spec/context.html#initiator
+			args="$args --exclude=metadata"
 		fi
+		# Run rpminspect for the specified architectures
+		[[ -n "$RPMINPSECT_ARCHES" ]] && args="$args --arches=$RPMINPSECT_ARCHES"
+		# If we have a previous build to compare with, use that as before_build
+		[[ -n "$latest_build" ]] && args="$args ./inspect_builds/$latest_build"
+		# The remaining part is treated as the after_build/the build to be inspected
 		args="$args ./inspect_builds/$PACKIT_PACKAGE_NVR"
 	  rlRun "/usr/bin/rpminspect $args" 0 "Run rpminspect"
 		rlRun "cp $TMT_PLAN_DATA/viewer.html $TMT_TEST_DATA/viewer.html"
