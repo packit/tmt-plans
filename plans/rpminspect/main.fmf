@@ -12,8 +12,6 @@ prepare:
     package:
       # TODO: Maybe this can be altered to use rpminspect container?
       - rpminspect
-      # TODO: Use adjust to get the appropriate rpminspect
-      - rpminspect-data-fedora
       - koji
       - clamav-freshclam
       - tree
@@ -24,5 +22,16 @@ prepare:
       --output "$TMT_PLAN_DATA/viewer.html"
       https://raw.githubusercontent.com/rpminspect/rpminspect/main/contrib/viewer.html
 
+adjust:
+  - prepare+:
+      - name: Get Fedora rpminspect data
+        how: install
+        package: [ rpminspect-data-fedora ]
+    when: distro == fedora
+  - prepare+:
+      - name: Get Centos rpminspect data
+        how: install
+        package: [ rpminspect-data-centos ]
+    when: distro == centos-stream
 discover+:
   filter: "tag: rpminspect"

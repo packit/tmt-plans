@@ -20,14 +20,16 @@ rlJournalStart
 		if [[ -n "${RPMINSPECT_KOJI_BUILD}" ]]; then
 				rlFail "Not implemented for koji tags"
 		else
-			if rlIsFedora; then
+			if rlIsFedora || rlIsCentOS; then
 				# TODO: Allow for other variables defining PACKAGE_NAME
-				rlRun -s "/usr/bin/koji list-tagged --latest --inherit --quiet f${VERSION_ID} ${PACKIT_PACKAGE_NAME}" 0 "Get latest koji build"
+				rlIsFedora && rlRun "tag=f${VERSION_ID}" 0 "Set Fedora tag"
+				rlIsCentOS && rlRun "tag=epel${VERSION_ID}" 0 "Set Epel tag"
+				rlRun -s "/usr/bin/koji list-tagged --latest --inherit --quiet ${tag} ${PACKIT_PACKAGE_NAME}" 0 "Get latest koji build"
 				rlRun "latest_build=\$(cat $rlRun_LOG | sed 's/\s.*//')" 0 "Resolve latest_build variable"
 				if [[ -n "$latest_build" ]]; then
 					## If the package is already uploaded downstream
 					# Default and required options
-					args="-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/fedora.yaml}"
+					args="-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/${ID}.yaml}"
 					# Fetch and write to ./inspect_builds
 					args="$args -f  -w ./inspect_builds"
 					# Specify the architectures
@@ -37,7 +39,7 @@ rlJournalStart
 					rlRun "/usr/bin/rpminspect $args" 0 "Downloading latest koji builds"
 				fi
 			else
-				rlFail "Not implemented for tags other than fedora"
+				rlFail "Not implemented for tags other than fedora or centos"
 			fi
 		fi
 		# Copy current artifact builds to koji-like file structure
@@ -51,7 +53,7 @@ rlJournalStart
 
 		## Do actual rpminspect
 		# Default and required options
-		args="-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/fedora.yaml}"
+		args="-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/${ID}.yaml}"
 		# Output the data to json so that it can be displayed
 		args="$args --output=$TMT_TEST_DATA/result.json --format=json"
 		# Specify the test to run
