@@ -98,7 +98,8 @@ else
 	if (( bad_results > 0 )); then
 		result=fail
 	elif (( verify_results > 0 )); then
-		result=warn
+		# TODO: Switch result to warn when testing-farm supports it
+		result=info
 	elif (( info_results > 0 )); then
 		result=info
 	else
