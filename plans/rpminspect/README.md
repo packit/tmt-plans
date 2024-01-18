@@ -61,6 +61,21 @@ See `rpminspect -l` for a list of available tests.
 
 See `rpminspect -l` for a list of available tests.
 
+`RPMINSPECT_THRESHOLD` \[Default: `BAD`\]
+
+: Set the maximum result status that makes the rpminspect test fail
+
+One of \[`OK`, `INFO`, `VERIFY`, `BAD` \]
+
+The default will treat each check status as `pass`, `info`, `warn`, `fail` respectively. Use this variable to mark the
+overall `pass`/`fail` of the test.
+
+`RPMINSPECT_SUPPRESS`
+
+: Set the minimum result status that will be reported
+
+One of \[`OK`, `INFO`, `VERIFY`, `BAD` \]
+
 `RPMINPSECT_ARCHES`
 
 : Run inspection only on the specified architecture packages

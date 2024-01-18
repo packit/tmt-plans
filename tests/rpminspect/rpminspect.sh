@@ -65,18 +65,51 @@ rlJournalStart
 		fi
 		[[ -n "$RPMINPSECT_ARCHES" ]] && rlRun "args=\"\$args --arches=$RPMINPSECT_ARCHES\"" 0 "Set args: Run rpminspect for the specified architectures"
 		[[ -n "$latest_build" ]] && rlRun "args=\"\$args ./inspect_builds/$latest_build\"" 0 "Set args: Use latest_build as before_build"
+		rlRun "args=\"\$args --threshold=${RPMINSPECT_THRESHOLD:-BAD}\"" 0 "Set args: Failure threshold"
+		[[ -n "${RPMINSPECT_SUPPRESS}" ]] && rlRun "args=\"\$args --suppress=${RPMINSPECT_SUPPRESS}\"" 0 "Set args: Suppress threshold"
 		rlRun "args=\"\$args ./inspect_builds/$PACKIT_PACKAGE_NVR\" && echo \$args" 0 "Set args: Set downloaded source as after_build"
 	  rlRun "/usr/bin/rpminspect $args" 0 "Run rpminspect"
+		# Get the number of BAD and VERIFY check results
+		# Note about jq syntax used:
+		# - .[][]               : collapse the dict of list of objects into a series of objects
+		# - select(.result ...) : filter the series of objects by the `result` value
+		# - [ ... ] | length    : create a list of the filtered object series and count the length
+		rlRun "bad_results=\$(jq '[.[][] | select(.result == \"BAD\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the BAD check results"
+		rlRun "verify_results=\$(jq '[.[][] | select(.result == \"VERIFY\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the VERIFY check results"
+		rlRun "info_results=\$(jq '[.[][] | select(.result == \"INFO\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the INFO check results"
+		rlRun "ok_results=\$(jq '[.[][] | select(.result == \"OK\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the OK check results"
 		rlRun "cp $TMT_PLAN_DATA/viewer.html $TMT_TEST_DATA/viewer.html"
 	rlPhaseEnd
 
 	rlPhaseStartCleanup
 		rlRun "popd"
 		rlRun "rm -r $tmp" 0 "Remove tmp directory"
-		# Note: $TESTRESULT_RESULT_STRING is not made available. Using $__INTERNAL_PHASES_WORST_RESULT instead
-		cat <<EOF > "$TMT_TEST_DATA/results.yaml"
-- name: /rpminspect
-  result: ${__INTERNAL_PHASES_WORST_RESULT,,}
+	rlPhaseEnd
+rlJournalEnd
+
+# Report the test results
+source $BEAKERLIB_DIR/TestResults
+if [[ ${TESTRESULT_RESULT_STRING,,} != pass ]]; then
+	# If test failed or triggerred warning within the test itself, use that outcome
+	result=${TESTRESULT_RESULT_STRING,,}
+else
+	# Otherwise take the highest result status of the rpminspect checks
+	# BAD > VERIFY > INFO > OK
+	if (( bad_results > 0 )); then
+		result=fail
+	elif (( verify_results > 0 )); then
+		result=warn
+	elif (( info_results > 0 )); then
+		result=info
+	else
+		result=pass
+	fi
+fi
+# Write the actual results.yaml
+cat <<EOF >> "$TMT_TEST_DATA/results.yaml"
+- name: /
+  result: ${result}
+  note: ${bad_results} BAD, ${verify_results} VERIFY, ${info_results} INFO, ${ok_results} OK
   log:
     - ../output.txt
     - ../journal.txt
@@ -84,5 +117,3 @@ rlJournalStart
     - viewer.html
     - result.json
 EOF
-	rlPhaseEnd
-rlJournalEnd
