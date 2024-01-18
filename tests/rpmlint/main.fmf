@@ -2,5 +2,6 @@ summary: Run rpmlint
 tag: rpmlint
 require:
   - rpmlint
+result: custom
 
 test+: rpmlint.sh
