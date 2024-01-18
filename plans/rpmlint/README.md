@@ -7,11 +7,13 @@ Run [rpmlint] on the current Copr project or Koji build
 ## Synopsis
 
 ```yaml
-plans:
-  import:
-    url: https://github.com/packit/tmt-plans
-    ref: main
-    name: /plans/rpmlint
+discover:
+  how: fmf
+  filter: "tag: rpmlint"
+  url: https://github.com/packit/tmt-plans
+  ref: main
+execute:
+  how: tmt
 ```
 
 ## Description
@@ -22,8 +24,9 @@ This plan simply runs the command
 $ rpmlint ./*.rpm
 ```
 
-Currently, there is no support to pass in additional `.rpmlintrc` due to limitations of the [`tmt`][tmt-import]
-interface. The `rpm` and `srpm` artifacts are taken from the testing-farm artifacts
+The `rpm` and `srpm` artifacts are taken from the testing-farm artifacts. In order to pass a `.rpmlintrc` file, use the
+[`prepare`] step of the plan to copy the file to `TMT_PLAN_DATA`. Only the `rpmlintrc` file that matches the spec file
+is used.
 
 :::note
 
@@ -39,11 +42,26 @@ No options available
 
 - Rpmlint the upstream packit project
   ```yaml
-  plans:
-    import:
-      url: https://github.com/packit/tmt-plans
-      ref: main
-      name: /plans/rpmlint
+  discover:
+    how: fmf
+    filter: "tag: rpmlint"
+    url: https://github.com/packit/tmt-plans
+    ref: main
+  execute:
+    how: tmt
+  ```
+- Use `rpmlintrc` file
+  ```yaml
+  prepare:
+    - how: shell
+      script: cp ./*.rpmlintrc $TMT_PLAN_DATA/
+  discover:
+    how: fmf
+    filter: "tag: rpmlint"
+    url: https://github.com/packit/tmt-plans
+    ref: main
+  execute:
+    how: tmt
   ```
 
 ## See Also
@@ -53,4 +71,4 @@ No options available
 <!-- SPHINX-END -->
 
 [rpmlint]: https://github.com/rpm-software-management/rpmlint
-[tmt-import]: https://tmt.readthedocs.io/en/stable/spec/plans.html#import-plans
+[`prepare`]: https://tmt.readthedocs.io/en/stable/spec/plans.html#prepare

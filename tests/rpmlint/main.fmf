@@ -1,4 +1,6 @@
 summary: Run rpmlint
 tag: rpmlint
+require:
+  - rpmlint
 
 test+: rpmlint.sh
