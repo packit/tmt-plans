@@ -60,7 +60,8 @@ else
 	if (( error_count > 0 )); then
 		result=fail
 	elif (( warning_count > 0 )); then
-		result=warn
+		# TODO: Switch result to warn when testing-farm supports it
+		result=info
 	elif (( badness_count > 0 )); then
 		result=info
 	else
