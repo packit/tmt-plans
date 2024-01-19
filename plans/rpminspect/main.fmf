@@ -15,6 +15,7 @@ prepare:
       - koji
       - clamav-freshclam
       - tree
+      - jq
   - name: Get other files from repo
     how: shell
     script: >
