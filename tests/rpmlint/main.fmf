@@ -1,7 +1,11 @@
+/:
+  inherit: false
+
 summary: Run rpmlint
-tag: rpmlint
+description: |
+  Requires having some environment variables predefined.
+  See documentation of the run-rpmlint script.
 require:
   - rpmlint
-result: custom
-
-test+: rpmlint.sh
+  - rpmlint-fedora-license-data
+test: python3 ./run-rpmlint.py

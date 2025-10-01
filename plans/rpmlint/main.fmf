@@ -7,8 +7,9 @@ provision:
   how: container
   image: fedora:latest
 
-discover+:
-  filter: "tag: rpmlint"
+discover:
+  how: fmf
+  test: /tests/rpmlint
 
 adjust+:
   prepare+:
