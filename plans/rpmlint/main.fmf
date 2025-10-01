@@ -3,6 +3,10 @@ summary: Run rpmlint on all rpms and spec file
 description: |
   Equivalent to zuul job running rpmlint
 
+provision:
+  how: container
+  image: fedora:latest
+
 discover+:
   filter: "tag: rpmlint"
 
