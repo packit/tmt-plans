@@ -1,11 +1,25 @@
 /:
   inherit: false
 
-summary: Run rpmlint
-description: |
-  Requires having some environment variables predefined.
-  See documentation of the run-rpmlint script.
-require:
-  - rpmlint
-  - rpmlint-fedora-license-data
-test: python3 ./run-rpmlint.py
+/prepare-distgit:
+  summary: Prepare with distgit environment
+  enabled: false
+  order: 40
+  require:
+    - koji
+    - git
+  test: python3 ./distgit-prepare.py
+  adjust:
+    # TODO: For now this is only available for distgit commits
+    when: initiator == fedora-ci and trigger == commit
+    enabled: true
+
+/run-rpmlint:
+  summary: Run rpmlint
+  description: |
+    Requires having some environment variables predefined.
+    See documentation of the run-rpmlint script.
+  require:
+    - rpmlint
+    - rpmlint-fedora-license-data
+  test: python3 ./run-rpmlint.py
