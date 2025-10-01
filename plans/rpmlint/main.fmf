@@ -5,3 +5,15 @@ description: |
 
 discover+:
   filter: "tag: rpmlint"
+
+adjust+:
+  prepare+:
+    - name: Dependencies for the distgit-prepare
+      how: install
+      package:
+        - koji
+        - git
+    - how: shell
+      script: python3 plans/rpmlint/distgit-prepare.py
+  # TODO: For now this is only available for distgit commits
+  when: initiator == fedora-ci and trigger == commit
