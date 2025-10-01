@@ -19,6 +19,8 @@ def main(args: argparse.Namespace) -> None:
         rpmlint_args.extend(["-c", args.toml_file])
     if args.spec_file:
         rpmlint_args.append(args.spec_file)
+    if args.rpm_files:
+        rpmlint_args.append(args.rpm_files)
     print(f"Running rpmlint with: {rpmlint_args}")
     subprocess.run(["rpmlint", *rpmlint_args])
 

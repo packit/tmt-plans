@@ -50,6 +50,8 @@ def main(args: argparse.Namespace) -> None:
         print("Found rpmlint.toml file")
         with args.env_file.open("a") as f:
             f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
+
+    # Find the files to lint
     spec_files = list(dist_git_path.glob("*.spec"))
     if len(spec_files) > 1:
         print("Warn: More than 1 spec file found")
@@ -58,6 +60,12 @@ def main(args: argparse.Namespace) -> None:
             f.write(f"SPEC_FILE={spec_files[0]}\n")
     else:
         print("Warn: No spec file found?")
+    subprocess.run(
+        ["koji", "download-task", args.koji_task_id],
+        cwd=args.workdir,
+    )
+    with args.env_file.open("a") as f:
+        f.write(f"RPM_FILES={args.workdir}/*.rpm\n")
 
 
 if __name__ == "__main__":
