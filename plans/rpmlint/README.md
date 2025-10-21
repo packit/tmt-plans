@@ -27,21 +27,25 @@ automatically, otherwise see the [options section](#options) for the expected co
 `SPEC_FILE`
 
 : koji-build: Detected from dist-git (`*.spec`)
+: copr: Not supported currently
 : Spec file to check.
 
 `RPM_FILES`
 
 : koji-build: Downloaded all rpm files from koji task
+: copr: From testing-farm artifacts (`/var/share/test-artifacts/*.rpm`)
 : RPM files to check. Can be wildcard.
 
 `RPMLINT_RC_FILE`
 
 : koji-build: Detected from dist-git (`*.rpmlintrc`)
+: copr: Not supported currently
 : .rpmlintrc file.
 
 `RPMLINT_TOML_FILE`
 
 : koji-build: Detected from dist-git (`rpmlint.toml`)
+: copr: Not supported currently
 : Rpmlint toml file to override.
 
 ## See Also

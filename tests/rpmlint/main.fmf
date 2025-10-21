@@ -14,6 +14,18 @@
     when: initiator == fedora-ci and trigger == commit
     enabled: true
 
+/prepare-copr:
+  summary: Prepare with copr environment
+  enabled: false
+  order: 40
+  require:
+    - copr
+    - git
+  test: python3 ./copr-prepare.py
+  adjust:
+    when: initiator == packit
+    enabled: true
+
 /run-rpmlint:
   summary: Run rpmlint
   description: |
