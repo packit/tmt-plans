@@ -7,62 +7,46 @@ Run [rpmlint] on the current Copr project or Koji build
 ## Synopsis
 
 ```yaml
-discover:
-  how: fmf
-  filter: "tag: rpmlint"
-  url: https://github.com/packit/tmt-plans
-  ref: main
-execute:
-  how: tmt
+plans:
+  import:
+    url: https://github.com/packit/tmt-plans
+    ref: main
+    name: /plans/rpmlint
 ```
 
 ## Description
 
-This plan simply runs the command
+This plan simply runs `rpmlint` against the rpms and spec files provided. For specific details, see the
+[`/tests/rpmlint/run-rpmlint.py`] wrapper file.
 
-```console
-$ rpmlint ./*.rpm
-```
-
-The `rpm` and `srpm` artifacts are taken from the testing-farm artifacts. In order to pass a `.rpmlintrc` file, use the
-[`prepare`] step of the plan to copy the file to `TMT_PLAN_DATA`. Only the `rpmlintrc` file that matches the spec file
-is used.
-
-:::note
-
-The rpmlint of the `.spec` file is handled automatically when running `rpmlint` against a `srpm`.
-
-:::
+Depending on the calling environment (`initiator`, `trigger` contexts) the inputs of this plan are provided
+automatically, otherwise see the [options section](#options) for the expected control parameters.
 
 ## Options
 
-No options available
+`SPEC_FILE`
 
-## Examples
+: koji-build: Detected from dist-git (`*.spec`)
+: copr: Not supported currently
+: Spec file to check.
 
-- Rpmlint the upstream packit project
-  ```yaml
-  discover:
-    how: fmf
-    filter: "tag: rpmlint"
-    url: https://github.com/packit/tmt-plans
-    ref: main
-  execute:
-    how: tmt
-  ```
-- Use `rpmlintrc` file
-  ```yaml
-  prepare:
-    - how: shell
-      script: cp ./*.rpmlintrc $TMT_PLAN_DATA/
-  discover:
-    how: fmf
-    filter: "tag: rpmlint"
-    url: https://github.com/packit/tmt-plans
-    ref: main
-  execute:
-    how: tmt
-  ```
+`RPM_FILES`
+
+: koji-build: Downloaded all rpm files from koji task
+: copr: From testing-farm artifacts (`/var/share/test-artifacts/*.rpm`)
+: RPM files to check. Can be wildcard.
+
+`RPMLINT_RC_FILE`
+
+: koji-build: Detected from dist-git (`*.rpmlintrc`)
+: copr: Not supported currently
+: .rpmlintrc file.
+
+`RPMLINT_TOML_FILE`
+
+: koji-build: Detected from dist-git (`rpmlint.toml`)
+: copr: Not supported currently
+: Rpmlint toml file to override.
 
 ## See Also
 
@@ -71,4 +55,4 @@ No options available
 <!-- SPHINX-END -->
 
 [rpmlint]: https://github.com/rpm-software-management/rpmlint
-[`prepare`]: https://tmt.readthedocs.io/en/stable/spec/plans.html#prepare
+[`/tests/rpmlint/run-rpmlint.py`]: ../../tests/rpmlint/run-rpmlint.py

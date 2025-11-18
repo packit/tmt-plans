@@ -1,7 +1,37 @@
-summary: Run rpmlint
-tag: rpmlint
-require:
-  - rpmlint
-result: custom
+/:
+  inherit: false
 
-test+: rpmlint.sh
+/prepare-distgit:
+  summary: Prepare with distgit environment
+  enabled: false
+  order: 40
+  require:
+    - koji
+    - git
+  test: python3 ./distgit-prepare.py
+  adjust:
+    # TODO: For now this is only available for distgit commits
+    when: initiator == fedora-ci and trigger == commit
+    enabled: true
+
+/prepare-copr:
+  summary: Prepare with copr environment
+  enabled: false
+  order: 40
+  require:
+    - copr
+    - git
+  test: python3 ./copr-prepare.py
+  adjust:
+    when: initiator == packit
+    enabled: true
+
+/run-rpmlint:
+  summary: Run rpmlint
+  description: |
+    Requires having some environment variables predefined.
+    See documentation of the run-rpmlint script.
+  require:
+    - rpmlint
+    - rpmlint-fedora-license-data
+  test: python3 ./run-rpmlint.py
