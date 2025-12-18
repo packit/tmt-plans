@@ -4,6 +4,7 @@
 /prepare-distgit:
   summary: Prepare with distgit environment
   enabled: false
+  duration: 30m
   order: 40
   require:
     - koji
@@ -17,6 +18,7 @@
 /prepare-copr:
   summary: Prepare with copr environment
   enabled: false
+  duration: 30m
   order: 40
   require:
     - copr
@@ -28,6 +30,7 @@
 
 /run-rpmlint:
   summary: Run rpmlint
+  duration: 30m
   description: |
     Requires having some environment variables predefined.
     See documentation of the run-rpmlint script.
