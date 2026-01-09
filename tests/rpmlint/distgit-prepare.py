@@ -6,6 +6,7 @@
 import argparse
 import os
 import re
+import sys
 import subprocess
 from pathlib import Path
 
@@ -17,7 +18,7 @@ def main(args: argparse.Namespace) -> None:
     args.env_file: Path
 
     # Get the basic build information from koji
-    task_info = subprocess.run(
+    result = subprocess.run(
         [
             "koji",
             "taskinfo",
@@ -26,8 +27,17 @@ def main(args: argparse.Namespace) -> None:
         ],
         capture_output=True,
         text=True,
-    ).stdout
-    source = re.search(r"Source:\s*(.*)", task_info).group(1)
+    )
+    task_info = result.stdout
+    task_error = result.stderr
+    print(f"Task info output:\n{task_info}\nTask error:\n{task_error}")
+    source_match_obj = re.search(r"Source:\s*(.*)", task_info)
+    if source_match_obj is None:
+        print(
+            "Error: Could not find 'Source:' in koji taskinfo output. Maybe a 500 error? Please retry."
+        )
+        sys.exit(1)
+    source = source_match_obj.group(1)
     source_match = re.search(r"git\+(?P<url>.*)#(?P<ref>.*)", source)
     repo_url = source_match.group("url")
     repo_ref = source_match.group("ref")
