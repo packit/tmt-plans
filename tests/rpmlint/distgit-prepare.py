@@ -28,14 +28,16 @@ def main(args: argparse.Namespace) -> None:
         capture_output=True,
         text=True,
     ).stdout
-    
+
     source_match_obj = re.search(r"Source:\s*(.*)", task_info)
     if source_match_obj is None:
-        print("Error: Could not find 'Source:' in koji taskinfo output. Maybe a 500 error? Please retry.")
+        print(
+            "Error: Could not find 'Source:' in koji taskinfo output. Maybe a 500 error? Please retry."
+        )
         print(f"Task info output:\n{task_info}")
         sys.exit(1)
     source = source_match_obj.group(1)
-    
+
     source_match = re.search(r"git\+(?P<url>.*)#(?P<ref>.*)", source)
     repo_url = source_match.group("url")
     repo_ref = source_match.group("ref")
