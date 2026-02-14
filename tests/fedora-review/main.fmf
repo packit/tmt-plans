@@ -1,0 +1,39 @@
+/:
+  inherit: false
+
+/prepare-distgit:
+  summary: Prepare with distgit environment
+  enabled: false
+  duration: 30m
+  order: 40
+  require:
+    - koji
+    - git
+  test: python3 ./distgit-prepare.py
+  adjust:
+    # TODO: For now this is only available for distgit commits
+    when: initiator == fedora-ci and trigger == commit
+    enabled: true
+
+/prepare-copr:
+  summary: Prepare with copr environment
+  enabled: false
+  duration: 30m
+  order: 40
+  require:
+    - copr
+    - git
+  test: python3 ./copr-prepare.py
+  adjust:
+    when: initiator == packit
+    enabled: true
+
+/run-fedora-review:
+  summary: Run fedora-review
+  duration: 30m
+  description: |
+    Requires having some environment variables predefined.
+    See documentation of the run-fedora-review script.
+  require:
+    - fedora-review
+  test: python3 ./run-fedora-review.py

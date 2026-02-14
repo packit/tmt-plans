@@ -1,0 +1,1 @@
+../rpmlint/copr-prepare.py
