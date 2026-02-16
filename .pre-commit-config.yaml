@@ -8,7 +8,7 @@ repos:
     hooks:
       - id: prettier
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-merge-conflict
@@ -27,36 +27,36 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
 
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 26.1.0
     hooks:
       - id: black
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.4
+    rev: v8.30.0
     hooks:
       - id: gitleaks
         # The hook runs 'gitleaks protect --staged' which parses output of
         # 'git diff --staged', i.e. always passes in pre-push/manual stage.
-        stages: [commit]
+        stages: [pre-commit]
   - repo: https://github.com/packit/pre-commit-hooks
-    rev: v1.2.0
+    rev: v1.3.0
     hooks:
       - id: check-rebase
         args:
           - https://github.com/packit/tmt-plans.git
-        stages: [manual, push]
+        stages: [manual, pre-push]
   - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.17
+    rev: 1.0.0
     hooks:
       - id: mdformat
         additional_dependencies:
           - mdformat-gfm
           - mdformat-tables
   - repo: https://github.com/teemtee/tmt
-    rev: 1.34.0
+    rev: 1.67.0
     hooks:
       - id: tmt-lint
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.28.6
+    rev: 0.36.2
     hooks:
       - id: check-github-actions
