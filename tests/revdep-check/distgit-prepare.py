@@ -63,7 +63,9 @@ def get_package_info_from_koji(task_id: str) -> tuple[str, str] | None:
     # Parse NVR to get package name and version
     try:
         package_name, package_version, release = parse_nvr(nvr)
-        print(f"Parsed: name={package_name}, version={package_version}, release={release}")
+        print(
+            f"Parsed: name={package_name}, version={package_version}, release={release}"
+        )
         return package_name, package_version
     except ValueError as e:
         print(f"Warning: Error parsing NVR: {e}")
