@@ -27,3 +27,4 @@ You can alter the inputs of this plan through environment variables.
 - Other plans
   - [`/plans/rpmlint`](plans/rpmlint)
   - [`/plans/fedora-review`](plans/fedora-review)
+  - [`/plans/revdep-check`](plans/revdep-check)
