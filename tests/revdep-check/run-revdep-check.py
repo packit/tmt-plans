@@ -66,11 +66,7 @@ def main(args: argparse.Namespace) -> None:
     # Run the check
     return_code, output = run_revdep_check(args.package_name, args.package_version)
 
-    print("\n" + "=" * 80)
-    print("REVERSE DEPENDENCY CHECK OUTPUT:")
-    print("=" * 80)
     print(output)
-    print("=" * 80 + "\n")
 
     if output.strip() or return_code != 0:
         print("Reverse dependency check found issues (see output above)")
