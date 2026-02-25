@@ -37,14 +37,14 @@ repos:
       - id: gitleaks
         # The hook runs 'gitleaks protect --staged' which parses output of
         # 'git diff --staged', i.e. always passes in pre-push/manual stage.
-        stages: [commit]
+        stages: [pre-commit]
   - repo: https://github.com/packit/pre-commit-hooks
     rev: v1.2.0
     hooks:
       - id: check-rebase
         args:
           - https://github.com/packit/tmt-plans.git
-        stages: [manual, push]
+        stages: [manual, pre-push]
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.17
     hooks:
