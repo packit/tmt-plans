@@ -1,0 +1,27 @@
+/:
+  inherit: false
+
+/prepare-distgit:
+  summary: Prepare with distgit environment
+  enabled: false
+  duration: 30m
+  order: 40
+  require:
+    - koji
+    - git
+  test: python3 ./distgit-prepare.py
+  adjust:
+    # TODO: For now this is only available for distgit commits
+    when: initiator == fedora-ci and trigger == commit
+    enabled: true
+
+/run-license-validate:
+  summary: Run license-validate
+  duration: 30m
+  require:
+    - license-validate
+    # soft requirement of python3-specfile
+    - redhat-rpm-config
+    # can remove when license-validate-29 lands stable
+    - python3-specfile
+  test: python3 ./run-license-validate.py

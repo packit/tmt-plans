@@ -1,0 +1,12 @@
+summary: Run license-validate on the SPEC file
+
+description: |
+  Check if the License tag is SPDX formula and contains only allowed licenses.
+
+provision:
+  how: container
+  image: fedora:latest
+
+discover:
+  how: fmf
+  test: /tests/license-validate
