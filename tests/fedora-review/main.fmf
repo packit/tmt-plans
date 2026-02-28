@@ -37,3 +37,4 @@
   require:
     - fedora-review
   test: python3 ./run-fedora-review.py
+  result: custom

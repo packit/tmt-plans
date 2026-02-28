@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>fedora-review report viewer</title>
+    <meta charset="utf-8" />
+
+    <style>
+      .flexgap {
+        display: flex;
+        align-items: center;
+        gap: 1em;
+      }
+      .result {
+        padding: 1ex;
+        margin: 3ex;
+        background-color: #f2f2f2;
+        box-shadow: 2px 2px 2px lightgrey;
+      }
+      #summary {
+        gap: 2px;
+        margin: 5ex;
+        max-width: 100ex;
+        flex-wrap: wrap;
+      }
+      .result-SKIP {
+        background-color: white;
+        border-width: 1px;
+        border-color: lightgray;
+        border-style: solid;
+      }
+      .result-OK {
+        background-color: #e8ffe8;
+      }
+      .result-INFO {
+        background-color: lightblue;
+      }
+      .result-VERIFY {
+        background-color: darkorange;
+        font-weight: bold;
+      }
+      .result-BAD {
+        background-color: #ff4d4d;
+        font-weight: bold;
+      }
+    </style>
+
+    <base target="_blank" />
+  </head>
+
+  <body>
+    <header class="flexgap">
+      <h2><a href="https://pagure.io/FedoraReview">fedora-review</a></h2>
+      <div>A testsuite for Fedora package reviews</div>
+    </header>
+
+    <main>
+      <div id="summary"></div>
+      <div id="details"></div>
+    </main>
+  </body>
+
+  <script type="module">
+    import {
+      html,
+      render,
+    } from "https://cdn.jsdelivr.net/gh/lit/dist@2/core/lit-core.min.js";
+
+    function getReviewIssues(report) {
+      return report["issues"];
+    }
+
+    function renderIssue(issue) {
+      return html`
+        <details class="result" open>
+          <summary class="result-BAD">${issue.name}</summary>
+          <p>${issue.text}</p>
+          <p>Read more: <a href="${issue.url}">${issue.url}</a></p>
+        </details>
+      `;
+    }
+
+    function renderResults(report) {
+      const issues = getReviewIssues(report);
+      const summary = [];
+
+      if (issues?.length === 0) {
+        summary.push(html`<div class="result-OK">No issues were found</div>`);
+      } else {
+        issues.forEach((issue) => {
+          summary.push(renderIssue(issue));
+        });
+
+        summary.push(html`
+            <p>
+                 See also:
+                 <ul>
+                     <li><a href="https://docs.fedoraproject.org/en-US/package-maintainers/Package_Review_Process/">Package Review Process</a></li>
+                     <li><a href="https://docs.fedoraproject.org/en-US/packaging-guidelines/">Fedora Packaging Guidelines</a></li>
+                 </ul>
+            </p>
+        `);
+      }
+      render(summary, document.getElementById("summary"));
+    }
+
+    const renderError = (error) =>
+      render(error, document.getElementById("details"));
+
+    /*
+     * main
+     */
+
+    const url =
+      new URLSearchParams(window.location.search).get("url") ?? "./review.json";
+    try {
+      const response = await fetch(url);
+      if (response.ok) renderResults(await response.json());
+      else
+        renderError(
+          `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+        );
+    } catch (error) {
+      renderError(`Failed to fetch ${url}: ${error}`);
+    }
+  </script>
+</html>
