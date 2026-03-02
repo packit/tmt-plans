@@ -1,0 +1,1 @@
+../rpmlint/distgit-prepare.py
