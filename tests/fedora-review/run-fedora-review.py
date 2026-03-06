@@ -81,13 +81,7 @@ def fedora_review(spec_file, workdir):
     env["REVIEW_NO_MOCKGROUP_CHECK"] = "true"
 
     name = Path(spec_file).stem
-    cmd = [
-        "fedora-review",
-        "--mock-options='--isolation=simple'",
-        "--prebuilt",
-        "-n",
-        name,
-    ]
+    cmd = ["fedora-review", "--prebuilt", "-n", name]
     print(f"Running: {" ".join(cmd)}")
     subprocess.run(cmd, cwd=workdir, env=env, check=True)
 
