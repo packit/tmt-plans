@@ -49,7 +49,6 @@ def dump_results_yaml(issues: int):
   - files.dir
   - review.json
   - review.txt
-  name: /
   note:
   - 1 issues
   result: fail
