@@ -29,13 +29,16 @@ class Result(Enum):
 
 
 def dump_results_yaml(issues: int):
+    """
+    https://tmt.readthedocs.io/en/stable/spec/results.html
+    """
     result = Result.FAIL if issues else Result.PASS
     data = [
         {
             "name": "/",
             "result": result.value,
-            "note": f"{issues} issues",
-            "logs": ["viewer.html"] + FEDORA_REVIEW_RESULTS,
+            "note": [f"{issues} issues"],
+            "log": ["viewer.html"] + FEDORA_REVIEW_RESULTS,
         }
     ]
     path = os.path.join(os.environ.get("TMT_TEST_DATA"), "results.yaml")
@@ -78,7 +81,9 @@ def fedora_review(spec_file, workdir):
     env["REVIEW_NO_MOCKGROUP_CHECK"] = "true"
 
     name = Path(spec_file).stem
-    cmd = ["fedora-review", "--prebuilt", "-n", name]
+    cmd = ["fedora-review",
+           "--mock-options='--isolation=simple'",
+           "--prebuilt", "-n", name]
     print(f"Running: {" ".join(cmd)}")
     subprocess.run(cmd, cwd=workdir, env=env, check=True)
 
