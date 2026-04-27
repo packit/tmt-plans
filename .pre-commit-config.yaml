@@ -27,12 +27,12 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
 
-  - repo: https://github.com/psf/black
+  - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 26.3.1
     hooks:
       - id: black
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.1
+    rev: v8.30.0
     hooks:
       - id: gitleaks
         # The hook runs 'gitleaks protect --staged' which parses output of
@@ -52,10 +52,10 @@ repos:
         additional_dependencies:
           - mdformat-gfm
   - repo: https://github.com/teemtee/tmt
-    rev: 1.69.0
+    rev: 1.72.0
     hooks:
       - id: tmt-lint
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.37.0
+    rev: 0.37.1
     hooks:
       - id: check-github-actions
