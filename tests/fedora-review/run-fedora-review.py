@@ -10,7 +10,6 @@ from enum import Enum
 import json
 import yaml
 
-
 # Expose these to the users
 FEDORA_REVIEW_RESULTS = [
     "fedora-review.log.gz",
