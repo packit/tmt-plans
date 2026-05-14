@@ -7,6 +7,7 @@
 # ///
 
 import argparse
+import logging
 import os
 import re
 import sys
@@ -17,6 +18,9 @@ from typing import Any
 
 import tomli_w
 from ruamel.yaml import YAML
+
+logging.basicConfig(level="INFO")
+logger = logging.getLogger(Path(__file__).name)
 
 CI_CONFIG_SECTION = "rpmlint"
 CI_CONFIG_FILES = [
@@ -37,7 +41,7 @@ def get_config_from_ci_yaml(dist_git_path: Path) -> dict[str, Any] | None:
     else:
         return None
 
-    print(f"Found config file {ci_file_name}")
+    logger.info(f"Found config file {ci_file_name}")
     with ci_file.open("rb") as f:
         if ci_file.suffix == ".toml":
             full_config = tomllib.load(f)
@@ -45,10 +49,10 @@ def get_config_from_ci_yaml(dist_git_path: Path) -> dict[str, Any] | None:
             full_config = YAML().load(f)
 
     if not (tools := full_config.get("tools")):
-        print("No `tools` section found")
+        logger.info("No `tools` section found")
         return None
     if not (config := tools.get(CI_CONFIG_SECTION)):
-        print(f"No `tools.{config}` section found")
+        logger.info(f"No `tools.{config}` section found")
         return None
     return config
 
@@ -72,14 +76,14 @@ def set_config_files(config: dict[str, Any], args: argparse.Namespace) -> None:
 def get_config_fallback(dist_git_path: Path, args: argparse.Namespace) -> None:
     rc_files = list(dist_git_path.glob("*.rpmlintrc"))
     if len(rc_files) > 1:
-        print("Warn: More than 1 rpmlintrc file found")
+        logger.warning("More than 1 rpmlintrc file found")
     if rc_files:
-        print("Found rpmlintrc file")
+        logger.info("Found rpmlintrc file")
         with args.env_file.open("a") as f:
             f.write(f"RPMLINT_RC_FILE={rc_files[0]}\n")
     toml_file = dist_git_path / "rpmlint.toml"
     if toml_file.exists():
-        print("Found rpmlint.toml file")
+        logger.info("Found rpmlint.toml file")
         with args.env_file.open("a") as f:
             f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
 
@@ -103,11 +107,11 @@ def main(args: argparse.Namespace) -> None:
     )
     task_info = result.stdout
     task_error = result.stderr
-    print(f"Task info output:\n{task_info}\nTask error:\n{task_error}")
+    logger.info(f"Task info output:\n{task_info}\nTask error:\n{task_error}")
     source_match_obj = re.search(r"Source:\s*(.*)", task_info)
     if source_match_obj is None:
-        print(
-            "Error: Could not find 'Source:' in koji taskinfo output. Maybe a 500 error? Please retry."
+        logger.error(
+            "Could not find 'Source:' in koji taskinfo output. Maybe a 500 error? Please retry."
         )
         sys.exit(1)
     source = source_match_obj.group(1)
@@ -129,12 +133,12 @@ def main(args: argparse.Namespace) -> None:
     # TODO: Migrate these to tmt artifacts when possible
     spec_files = list(dist_git_path.glob("*.spec"))
     if len(spec_files) > 1:
-        print("Warn: More than 1 spec file found")
+        logger.warning("More than 1 spec file found")
     if spec_files:
         with args.env_file.open("a") as f:
             f.write(f"SPEC_FILE={spec_files[0]}\n")
     else:
-        print("Warn: No spec file found?")
+        logger.error("No spec file found?")
     subprocess.run(
         ["koji", "download-task", args.koji_task_id],
         cwd=args.workdir,

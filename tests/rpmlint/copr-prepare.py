@@ -4,10 +4,14 @@
 # ///
 
 import argparse
+import logging
 import os
 import re
 import subprocess
 from pathlib import Path
+
+logging.basicConfig(level="INFO")
+logger = logging.getLogger(Path(__file__).name)
 
 
 def main(args: argparse.Namespace) -> None:

@@ -4,8 +4,13 @@
 # ///
 
 import argparse
+import logging
 import os
 import subprocess
+from pathlib import Path
+
+logging.basicConfig(level="INFO")
+logger = logging.getLogger(Path(__file__).name)
 
 
 def main(args: argparse.Namespace) -> None:
@@ -21,7 +26,7 @@ def main(args: argparse.Namespace) -> None:
         rpmlint_args.append(args.spec_file)
     if args.rpm_files:
         rpmlint_args.append(args.rpm_files)
-    print(f"Running rpmlint with: {rpmlint_args}")
+    logger.info(f"Running rpmlint with: {rpmlint_args}")
     subprocess.run(["rpmlint", *rpmlint_args])
 
 
