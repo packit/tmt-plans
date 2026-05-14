@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 # /// script
-# dependencies = [ ]
+# dependencies = [
+#   "ruamel.yaml",
+#   "tomli-w",
+# ]
 # ///
 
 import argparse
@@ -8,7 +11,77 @@ import os
 import re
 import sys
 import subprocess
+import tomllib
 from pathlib import Path
+from typing import Any
+
+import tomli_w
+from ruamel.yaml import YAML
+
+CI_CONFIG_SECTION = "rpmlint"
+CI_CONFIG_FILES = [
+    "ci.yaml",
+    "ci.yml",
+    "ci.toml",
+    "fedora-ci.yaml",
+    "fedora-ci.yml",
+    "fedora-ci.toml",
+]
+
+
+def get_config_from_ci_yaml(dist_git_path: Path) -> dict[str, Any] | None:
+    for ci_file_name in CI_CONFIG_FILES:
+        ci_file = dist_git_path / ci_file_name
+        if ci_file.exists():
+            break
+    else:
+        return None
+
+    print(f"Found config file {ci_file_name}")
+    with ci_file.open("rb") as f:
+        if ci_file.suffix == ".toml":
+            full_config = tomllib.load(f)
+        else:
+            full_config = YAML().load(f)
+
+    if not (tools := full_config.get("tools")):
+        print("No `tools` section found")
+        return None
+    if not (config := tools.get(CI_CONFIG_SECTION)):
+        print(f"No `tools.{config}` section found")
+        return None
+    return config
+
+
+def set_config_files(config: dict[str, Any], args: argparse.Namespace) -> None:
+    if rc_content := config.get("rc"):
+        rc_content: str
+        rc_file: Path = args.workdir / "rpmlintrc"
+        rc_file.write_text(rc_content)
+        with args.env_file.open("a") as f:
+            f.write(f"RPMLINT_RC_FILE={rc_file}\n")
+    if toml_content := config.get("toml"):
+        toml_content: dict[str, Any]
+        toml_file: Path = args.workdir / "rpmlint.toml"
+        with toml_file.open("wb") as f:
+            tomli_w.dump(toml_content, f)
+        with args.env_file.open("a") as f:
+            f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
+
+
+def get_config_fallback(dist_git_path: Path, args: argparse.Namespace) -> None:
+    rc_files = list(dist_git_path.glob("*.rpmlintrc"))
+    if len(rc_files) > 1:
+        print("Warn: More than 1 rpmlintrc file found")
+    if rc_files:
+        print("Found rpmlintrc file")
+        with args.env_file.open("a") as f:
+            f.write(f"RPMLINT_RC_FILE={rc_files[0]}\n")
+    toml_file = dist_git_path / "rpmlint.toml"
+    if toml_file.exists():
+        print("Found rpmlint.toml file")
+        with args.env_file.open("a") as f:
+            f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
 
 
 def main(args: argparse.Namespace) -> None:
@@ -47,21 +120,13 @@ def main(args: argparse.Namespace) -> None:
     subprocess.run(["git", "clone", repo_url, dist_git_path])
     subprocess.run(["git", "checkout", "-d", repo_ref], cwd=dist_git_path)
 
-    # Find any rplintrc files
-    rc_files = list(dist_git_path.glob("*.rpmlintrc"))
-    if len(rc_files) > 1:
-        print("Warn: More than 1 rpmlintrc file found")
-    if rc_files:
-        print("Found rpmlintrc file")
-        with args.env_file.open("a") as f:
-            f.write(f"RPMLINT_RC_FILE={rc_files[0]}\n")
-    toml_file = dist_git_path / "rpmlint.toml"
-    if toml_file.exists():
-        print("Found rpmlint.toml file")
-        with args.env_file.open("a") as f:
-            f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
+    if config := get_config_from_ci_yaml(dist_git_path):
+        set_config_files(config, args)
+    else:
+        get_config_fallback(dist_git_path, args)
 
     # Find the files to lint
+    # TODO: Migrate these to tmt artifacts when possible
     spec_files = list(dist_git_path.glob("*.spec"))
     if len(spec_files) > 1:
         print("Warn: More than 1 spec file found")
