@@ -65,8 +65,10 @@ def main(args: argparse.Namespace) -> None:
     else:
         get_config_fallback(dist_git_path, args)
 
-    # Find the files to lint
-    # TODO: Migrate these to tmt artifacts when possible
+    utils.get_koji_build(args.koji_task_id, args.workdir, args.env_file)
+
+    # Find the other files
+    # TODO: The SRPM should be enough?
     spec_files = list(dist_git_path.glob("*.spec"))
     if len(spec_files) > 1:
         logger.warning("More than 1 spec file found")
@@ -75,13 +77,6 @@ def main(args: argparse.Namespace) -> None:
             f.write(f"SPEC_FILE={spec_files[0]}\n")
     else:
         logger.error("No spec file found?")
-    subprocess.run(
-        ["koji", "download-task", args.koji_task_id],
-        cwd=args.workdir,
-        check=True,
-    )
-    with args.env_file.open("a") as f:
-        f.write(f"RPM_FILES={args.workdir}/*.rpm\n")
 
 
 if __name__ == "__main__":

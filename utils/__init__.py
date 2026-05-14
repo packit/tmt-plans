@@ -82,3 +82,17 @@ def get_dist_git(koji_task_id: str, workdir: Path) -> Path:
         check=True,
     )
     return dist_git_path
+
+
+def get_koji_build(
+    koji_task_id: str, workdir: Path, env_file: Path | None = None
+) -> None:
+    # TODO: Migrate these to tmt artifacts when possible
+    subprocess.run(
+        ["koji", "download-task", koji_task_id],
+        cwd=workdir,
+        check=True,
+    )
+    if env_file:
+        with env_file.open("a") as f:
+            f.write(f"RPM_FILES={workdir}/*.rpm\n")
