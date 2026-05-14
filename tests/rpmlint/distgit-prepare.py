@@ -104,6 +104,7 @@ def main(args: argparse.Namespace) -> None:
         ],
         capture_output=True,
         text=True,
+        check=True,
     )
     task_info = result.stdout
     task_error = result.stderr
@@ -121,8 +122,15 @@ def main(args: argparse.Namespace) -> None:
 
     # Clone the dist-git used in the build
     dist_git_path: Path = args.workdir / "dist-git"
-    subprocess.run(["git", "clone", repo_url, dist_git_path])
-    subprocess.run(["git", "checkout", "-d", repo_ref], cwd=dist_git_path)
+    subprocess.run(
+        ["git", "clone", repo_url, dist_git_path],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "checkout", "-d", repo_ref],
+        cwd=dist_git_path,
+        check=True,
+    )
 
     if config := get_config_from_ci_yaml(dist_git_path):
         set_config_files(config, args)
@@ -142,6 +150,7 @@ def main(args: argparse.Namespace) -> None:
     subprocess.run(
         ["koji", "download-task", args.koji_task_id],
         cwd=args.workdir,
+        check=True,
     )
     with args.env_file.open("a") as f:
         f.write(f"RPM_FILES={args.workdir}/*.rpm\n")
@@ -162,4 +171,11 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args)
+    try:
+        main(args)
+    except (subprocess.CalledProcessError, SystemExit):
+        logger.error("Prepare failed!")
+        raise SystemExit(1)
+    except Exception as exc:
+        logger.error("Unexpected prepare failure", exc_info=exc)
+        raise SystemExit(2)

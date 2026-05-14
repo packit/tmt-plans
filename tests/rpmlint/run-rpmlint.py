@@ -27,7 +27,10 @@ def main(args: argparse.Namespace) -> None:
     if args.rpm_files:
         rpmlint_args.append(args.rpm_files)
     logger.info(f"Running rpmlint with: {rpmlint_args}")
-    subprocess.run(["rpmlint", *rpmlint_args])
+    subprocess.run(
+        ["rpmlint", *rpmlint_args],
+        check=True,
+    )
 
 
 if __name__ == "__main__":
@@ -59,4 +62,11 @@ if __name__ == "__main__":
     # TODO: Process the test results?
 
     args = parser.parse_args()
-    main(args)
+    try:
+        main(args)
+    except (subprocess.CalledProcessError, SystemExit):
+        logger.error("Rpmlint failed!")
+        raise SystemExit(1)
+    except Exception as exc:
+        logger.error("Unexpected rpmlint failure", exc_info=exc)
+        raise SystemExit(2)
