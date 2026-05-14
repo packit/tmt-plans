@@ -12,6 +12,12 @@ description: |
 provision:
   how: virtual
   image: fedora
+adjust+:
+  - when: initiator == packit, fedora-ci
+    because: testing-farm does not know how to map virtual to artemis provision
+    provision:
+      how: artemis
+      image: Fedora-latest
 
 discover:
   how: fmf
