@@ -1,38 +1,19 @@
-summary: Run rpminspect on all srpm and binary rpms
+summary: Run rpminspect on all rpms
 
-description: |
-  Equivalent to bohdi job running https://github.com/fedora-ci/rpminspect-pipeline
-
-# Update data package
-# dnf update --disablerepo="fedora*" -y ${RPMINSPECT_PACKAGE_NAME} ${RPMINSPECT_DATA_PACKAGE_NAME} > update_rpminspect.log 2>&1 || :
+provision:
+  how: container
+  image: fedora:latest
 
 prepare:
-  - name: Get necessary packages
-    how: install
-    package:
-      # TODO: Maybe this can be altered to use rpminspect container?
-      - rpminspect
-      - koji
-      - clamav-freshclam
-      - tree
-      - jq
-  - name: Get other files from repo
-    how: shell
-    script: >
-      curl --silent --show-error --fail --retry 5
-      --output "$TMT_PLAN_DATA/viewer.html"
-      https://raw.githubusercontent.com/rpminspect/rpminspect/main/contrib/viewer.html
+  - how: artifact
+    provide:
+      - copr.repository:@rpmisnpect/latest
+      - copr.repository:@osci/fedora-license-data
+    verify: false
+  - how: shell
+    script: |
+      echo "DIST_GIT_BRANCH=$@{dist-git-branch}" >> "$TMT_PLAN_ENVIRONMENT_FILE"
 
-adjust:
-  - prepare+:
-      - name: Get Fedora rpminspect data
-        how: install
-        package: [ rpminspect-data-fedora ]
-    when: distro == fedora
-  - prepare+:
-      - name: Get Centos rpminspect data
-        how: install
-        package: [ rpminspect-data-centos ]
-    when: distro == centos-stream
-discover+:
-  filter: "tag: rpminspect"
+discover:
+  how: fmf
+  test: /tests/rpminspect
