@@ -84,11 +84,24 @@ def get_dist_git(koji_task_id: str, workdir: Path) -> Path:
 
 
 def get_koji_build(
-    koji_task_id: str, workdir: Path, env_file: Path | None = None
+    koji_task_id: str,
+    workdir: Path,
+    env_file: Path | None = None,
+    arch: str | None = None,
 ) -> None:
     # TODO: Migrate these to tmt artifacts when possible
+    arch_flags = set()
+    if arch:
+        arch_flags.add(f"--arch={arch}")
+        arch_flags.add("--arch=noarch")
+        arch_flags.add("--arch=srpm")
     subprocess.run(
-        ["koji", "download-task", koji_task_id],
+        [
+            "koji",
+            "download-task",
+            koji_task_id,
+            *arch_flags,
+        ],
         cwd=workdir,
         check=True,
     )
