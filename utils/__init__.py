@@ -108,3 +108,31 @@ def get_koji_build(
     if env_file:
         with env_file.open("a") as f:
             f.write(f"RPM_FILES={workdir}/*.rpm\n")
+
+
+def get_bodhi_update(
+    update_id: str,
+    workdir: Path,
+    env_file: Path | None = None,
+    arch: str | None = None,
+) -> None:
+
+    # TODO: Migrate these to tmt artifacts when possible
+    arch_flag = f"--arch={arch}" if arch else "--arch=all"
+    subprocess.run(
+        [
+            "bodhi",
+            "updates",
+            "download",
+            # we don't need signed packages for rmdepcheck so this
+            # avoids problems if koji can't find the signed ones
+            "--no-gpg",
+            f"--updateid={update_id}",
+            arch_flag,
+        ],
+        cwd=workdir,
+        check=True,
+    )
+    if env_file:
+        with env_file.open("a") as f:
+            f.write(f"RPM_FILES={workdir}/*.rpm\n")
