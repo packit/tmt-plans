@@ -1,9 +1,5 @@
 summary: Run rpminspect on all rpms
 
-provision:
-  how: container
-  image: fedora:latest
-
 prepare:
   - how: artifact
     provide:
