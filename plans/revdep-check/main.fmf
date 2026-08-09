@@ -1,0 +1,13 @@
+summary: Check reverse dependencies for package version changes
+
+description: |
+  Runs fedora-revdep-check to verify that package version changes
+  don't break reverse dependencies in Fedora.
+
+provision:
+  how: container
+  image: fedora:latest
+
+discover:
+  how: fmf
+  test: /tests/revdep-check
