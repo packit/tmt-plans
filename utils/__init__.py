@@ -32,8 +32,10 @@ def get_config(dist_git_path: Path, section: str) -> dict[str, Any] | None:
     with ci_file.open("rb") as f:
         if ci_file.suffix == ".toml":
             full_config = tomllib.load(f)
-        else:
+        elif ci_file.suffix in [".yaml", ".yml"]:
             full_config = YAML().load(f)
+        else:
+            raise AssertionError("Trying to load a file not listed in CI_CONFIG_FILES")
 
     if not (tools := full_config.get("tools")):
         logger.info("No `tools` section found")
