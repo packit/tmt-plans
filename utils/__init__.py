@@ -41,7 +41,7 @@ def get_config(dist_git_path: Path, section: str) -> dict[str, Any] | None:
         logger.info("No `tools` section found")
         return None
     if not (config := tools.get(section)):
-        logger.info(f"No `tools.{config}` section found")
+        logger.info(f"No `tools.{section}` section found")
         return None
     return config
 
