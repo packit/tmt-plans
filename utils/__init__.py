@@ -9,9 +9,6 @@ from typing import Any
 logger = logging.getLogger("tmt_plans.utils")
 
 CI_CONFIG_FILES = [
-    "ci.yaml",
-    "ci.yml",
-    "ci.toml",
     "fedora-ci.yaml",
     "fedora-ci.yml",
     "fedora-ci.toml",
