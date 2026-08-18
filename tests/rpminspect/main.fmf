@@ -1,5 +1,67 @@
-summary: Run rpminspect
-tag: rpminspect
+/:
+  inherit: false
 
-test+: rpminspect.sh
-result: custom
+/clamav:
+  # TODO: Might require retries because of https://github.com/Cisco-Talos/clamav/issues/965
+  test: freshclam
+  duration: 10m
+  order: 40
+  require:
+    - clamav-update
+
+/prepare-distgit:
+  summary: Prepare with distgit environment
+  enabled: false
+  duration: 30m
+  order: 40
+  test: |
+    if [[ -n "$BODHI_UPDATE_ID" ]]; then
+      ./distgit-prepare.py bodhi-update $BODHI_UPDATE_ID
+    elif [[ -n "$KOJI_TASK_ID" ]]; then
+      ./distgit-prepare.py koji-task $KOJI_TASK_ID
+    else
+      echo "Could not determine how to prepare the repo"
+      exit 1
+    fi
+  require:
+    - bodhi
+    - koji
+    - git
+    - python3-ruamel-yaml
+  adjust:
+    when: initiator == fedora-ci
+    enabled: true
+
+/prepare-copr:
+  summary: Prepare with copr environment
+  enabled: false
+  duration: 30m
+  order: 40
+  require:
+    - copr
+    - git
+  test: python3 ./copr-prepare.py
+  adjust:
+    when: initiator == packit
+    enabled: true
+
+/run-rpminspect:
+  test: ./run-rpminspect.py
+  duration: 720m
+  require:
+    - rpminspect
+    - libabigail
+    - annobin-annocheck
+    - python3-ruamel-yaml
+  result: custom
+  adjust+:
+    - when: distro == fedora
+      require+:
+        - rpminspect-data-fedora
+      environment+:
+        RPMINSPECT_CONFIG: /usr/share/rpminspect/fedora.yaml
+    - when: distro == centos-stream
+      require+:
+        - rpminspect-data-centos
+      environment+:
+        RPMINSPECT_CONFIG: /usr/share/rpminspect/centos.yaml
