@@ -1,81 +1,82 @@
 #!/usr/bin/python3
 # /// script
-# dependencies = [ ]
+# dependencies = [
+#   "ruamel.yaml",
+#   "tomli-w",
+# ]
 # ///
 
 import argparse
+import logging
 import os
-import re
-import sys
 import subprocess
 from pathlib import Path
+from typing import Any
+
+import tomli_w
+
+import utils
+
+logging.basicConfig(level="INFO")
+logger = logging.getLogger(Path(__file__).name)
+
+CI_CONFIG_SECTION = "rpmlint"
+
+
+def set_config_files(config: dict[str, Any], args: argparse.Namespace) -> None:
+    if rc_content := config.get("rc"):
+        rc_content: str
+        rc_file: Path = args.workdir / "rpmlintrc"
+        rc_file.write_text(rc_content)
+        with args.env_file.open("a") as f:
+            f.write(f"RPMLINT_RC_FILE={rc_file}\n")
+    if toml_content := config.get("toml"):
+        toml_content: dict[str, Any]
+        toml_file: Path = args.workdir / "rpmlint.toml"
+        with toml_file.open("wb") as f:
+            tomli_w.dump(toml_content, f)
+        with args.env_file.open("a") as f:
+            f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
+
+
+def get_config_fallback(dist_git_path: Path, args: argparse.Namespace) -> None:
+    rc_files = list(dist_git_path.glob("*.rpmlintrc"))
+    if len(rc_files) > 1:
+        logger.warning("More than 1 rpmlintrc file found")
+    if rc_files:
+        logger.info("Found rpmlintrc file")
+        with args.env_file.open("a") as f:
+            f.write(f"RPMLINT_RC_FILE={rc_files[0]}\n")
+    toml_file = dist_git_path / "rpmlint.toml"
+    if toml_file.exists():
+        logger.info("Found rpmlint.toml file")
+        with args.env_file.open("a") as f:
+            f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
 
 
 def main(args: argparse.Namespace) -> None:
     """
     Prepare for rpmlint from a dist-git
     """
-    args.env_file: Path
+    dist_git_path = utils.get_dist_git(args.koji_task_id, args.workdir)
 
-    # Get the basic build information from koji
-    result = subprocess.run(
-        [
-            "koji",
-            "taskinfo",
-            "-v",
-            args.koji_task_id,
-        ],
-        capture_output=True,
-        text=True,
-    )
-    task_info = result.stdout
-    task_error = result.stderr
-    print(f"Task info output:\n{task_info}\nTask error:\n{task_error}")
-    source_match_obj = re.search(r"Source:\s*(.*)", task_info)
-    if source_match_obj is None:
-        print(
-            "Error: Could not find 'Source:' in koji taskinfo output. Maybe a 500 error? Please retry."
-        )
-        sys.exit(1)
-    source = source_match_obj.group(1)
-    source_match = re.search(r"git\+(?P<url>.*)#(?P<ref>.*)", source)
-    repo_url = source_match.group("url")
-    repo_ref = source_match.group("ref")
+    if config := utils.get_config(dist_git_path, CI_CONFIG_SECTION):
+        set_config_files(config, args)
+    else:
+        get_config_fallback(dist_git_path, args)
 
-    # Clone the dist-git used in the build
-    dist_git_path: Path = args.workdir / "dist-git"
-    subprocess.run(["git", "clone", repo_url, dist_git_path])
-    subprocess.run(["git", "checkout", "-d", repo_ref], cwd=dist_git_path)
+    utils.get_koji_build(args.koji_task_id, args.workdir, args.env_file)
 
-    # Find any rplintrc files
-    rc_files = list(dist_git_path.glob("*.rpmlintrc"))
-    if len(rc_files) > 1:
-        print("Warn: More than 1 rpmlintrc file found")
-    if rc_files:
-        print("Found rpmlintrc file")
-        with args.env_file.open("a") as f:
-            f.write(f"RPMLINT_RC_FILE={rc_files[0]}\n")
-    toml_file = dist_git_path / "rpmlint.toml"
-    if toml_file.exists():
-        print("Found rpmlint.toml file")
-        with args.env_file.open("a") as f:
-            f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
-
-    # Find the files to lint
+    # Find the other files
+    # TODO: The SRPM should be enough?
     spec_files = list(dist_git_path.glob("*.spec"))
     if len(spec_files) > 1:
-        print("Warn: More than 1 spec file found")
+        logger.warning("More than 1 spec file found")
     if spec_files:
         with args.env_file.open("a") as f:
             f.write(f"SPEC_FILE={spec_files[0]}\n")
     else:
-        print("Warn: No spec file found?")
-    subprocess.run(
-        ["koji", "download-task", args.koji_task_id],
-        cwd=args.workdir,
-    )
-    with args.env_file.open("a") as f:
-        f.write(f"RPM_FILES={args.workdir}/*.rpm\n")
+        logger.error("No spec file found?")
 
 
 if __name__ == "__main__":
@@ -93,4 +94,11 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args)
+    try:
+        main(args)
+    except (subprocess.CalledProcessError, SystemExit):
+        logger.error("Prepare failed!")
+        raise SystemExit(1)
+    except Exception as exc:
+        logger.error("Unexpected prepare failure", exc_info=exc)
+        raise SystemExit(2)
