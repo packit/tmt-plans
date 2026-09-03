@@ -1,0 +1,28 @@
+/:
+  inherit: false
+
+/prepare-distgit:
+  summary: Prepare with distgit environment
+  enabled: false
+  duration: 30m
+  order: 40
+  require:
+    - koji
+    - rpm
+    - python3
+    - python3-pip
+  test: python3 ./distgit-prepare.py
+  adjust:
+    when: initiator == fedora-ci and trigger == commit
+    enabled: true
+
+/run-revdep-check:
+  summary: Run reverse dependency check
+  duration: 30m
+  description: |
+    Checks for reverse dependency issues when package version changes.
+    Requires PACKAGE_NAME and PACKAGE_VERSION environment variables.
+  require:
+    - python3
+    - python3-pip
+  test: python3 ./run-revdep-check.py
