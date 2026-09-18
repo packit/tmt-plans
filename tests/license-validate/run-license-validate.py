@@ -4,23 +4,21 @@
 # ///
 
 import argparse
+import logging
 import os
 import subprocess
-import sys
+from pathlib import Path
+
+logging.basicConfig(level="INFO")
+logger = logging.getLogger(Path(__file__).name)
 
 
 def main(args: argparse.Namespace) -> None:
-    """
-    Run rpmlint
-    """
-    rpmlint_args = []
-    if args.spec_file:
-        rpmlint_args.append(args.spec_file)
-    print(f"Running: license-validate -v --spec {rpmlint_args}")
-    result = subprocess.run(["license-validate", "-v", "--spec", *rpmlint_args])
-    if result.returncode != 0:
-        print(f"Error: license-validate failed with exit code {result.returncode}")
-        sys.exit(1)
+    logger.info(f"Running: license-validate -v --spec {args.spec_file}")
+    subprocess.run(
+        ["license-validate", "-v", "--spec", args.spec_file],
+        check=True,
+    )
 
 
 if __name__ == "__main__":
@@ -34,4 +32,11 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args)
+    try:
+        main(args)
+    except (subprocess.CalledProcessError, SystemExit):
+        logger.error("license-validate failed!")
+        raise SystemExit(1)
+    except Exception as exc:
+        logger.error("Unexpected failure", exc_info=exc)
+        raise SystemExit(2)
