@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import sys
 import subprocess
@@ -13,6 +14,26 @@ CI_CONFIG_FILES = [
     "fedora-ci.yml",
     "fedora-ci.toml",
 ]
+
+# Scratch storage for build inputs. Deliberately *not* under `TMT_PLAN_DATA`:
+# tmt pulls that directory back off the guest and CI keeps it for the lifetime
+# of the request, so anything left there is stored forever. A single build can
+# be tens of gigabytes once every arch and its debuginfo is downloaded.
+DEFAULT_BUILD_DIR = Path("/var/tmp/tmt-plans-build")  # noqa: S108
+
+
+def get_build_dir(koji_task_id: str) -> Path:
+    """
+    Return the scratch directory holding the downloaded build.
+
+    Kept outside `TMT_PLAN_DATA` so the packages are not synced back and
+    archived. The task id keeps runs sharing a guest from seeing each other's
+    packages, which would otherwise break callers that expect a single SRPM.
+    """
+    root = Path(os.environ.get("TMT_PLANS_BUILD_DIR", DEFAULT_BUILD_DIR))
+    build_dir = root / str(koji_task_id)
+    build_dir.mkdir(parents=True, exist_ok=True)
+    return build_dir
 
 
 def get_config(dist_git_path: Path, section: str) -> dict[str, Any] | None:
@@ -84,14 +105,20 @@ def get_dist_git(koji_task_id: str, workdir: Path) -> Path:
 
 
 def get_koji_build(
-    koji_task_id: str, workdir: Path, env_file: Path | None = None
-) -> None:
+    koji_task_id: str, build_dir: Path | None = None, env_file: Path | None = None
+) -> Path:
     # TODO: Migrate these to tmt artifacts when possible
+    if build_dir is None:
+        build_dir = get_build_dir(koji_task_id)
+    build_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Downloading build into {build_dir}")
     subprocess.run(
         ["koji", "download-task", koji_task_id],
-        cwd=workdir,
+        cwd=build_dir,
         check=True,
     )
     if env_file:
         with env_file.open("a") as f:
-            f.write(f"RPM_FILES={workdir}/*.rpm\n")
+            f.write(f"BUILD_DIR={build_dir}\n")
+            f.write(f"RPM_FILES={build_dir}/*.rpm\n")
+    return build_dir

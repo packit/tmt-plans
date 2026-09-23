@@ -65,7 +65,9 @@ def main(args: argparse.Namespace) -> None:
     else:
         get_config_fallback(dist_git_path, args)
 
-    utils.get_koji_build(args.koji_task_id, args.workdir, args.env_file)
+    # The packages go to scratch storage, not to `workdir`: `workdir` is
+    # `TMT_PLAN_DATA`, which is synced back off the guest and archived.
+    utils.get_koji_build(args.koji_task_id, args.build_dir, args.env_file)
 
     # Find the other files
     # TODO: The SRPM should be enough?
@@ -86,6 +88,15 @@ if __name__ == "__main__":
         "--workdir",
         type=Path,
         default=os.environ.get("TMT_PLAN_DATA", "."),
+    )
+    parser.add_argument(
+        "--build-dir",
+        type=Path,
+        help=(
+            "Where to download the build. Must stay outside TMT_PLAN_DATA, "
+            "which is synced back off the guest and archived."
+        ),
+        default=None,
     )
     parser.add_argument(
         "--env-file",

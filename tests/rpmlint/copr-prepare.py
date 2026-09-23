@@ -12,6 +12,10 @@ from pathlib import Path
 logging.basicConfig(level="INFO")
 logger = logging.getLogger(Path(__file__).name)
 
+# Where testing-farm drops the built packages. Already outside TMT_PLAN_DATA,
+# so the packages are not synced back off the guest and archived.
+TEST_ARTIFACTS_DIR = "/var/share/test-artifacts"
+
 
 def main(args: argparse.Namespace) -> None:
     """
@@ -22,7 +26,8 @@ def main(args: argparse.Namespace) -> None:
     # TODO: Get the data from copr.
     # For now we assume a testing-farm environment.
     with args.env_file.open("a") as f:
-        f.write("RPM_FILES=/var/share/test-artifacts/*.rpm\n")
+        f.write(f"BUILD_DIR={TEST_ARTIFACTS_DIR}\n")
+        f.write(f"RPM_FILES={TEST_ARTIFACTS_DIR}/*.rpm\n")
 
 
 if __name__ == "__main__":

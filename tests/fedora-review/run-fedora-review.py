@@ -155,14 +155,20 @@ def main(args: argparse.Namespace) -> None:
     if not args.rpm_files:
         raise RuntimeError("No RPM files provided")
 
-    # At this point, the RPM packages are already downloaded in `args.workdir`,
-    # we just need to copy the .spec next to them
-    shutil.copy(args.spec_file, args.workdir)
+    if not args.build_dir:
+        raise RuntimeError("No build directory provided")
 
-    review = fedora_review(args.spec_file, args.workdir)
+    # At this point, the RPM packages are already downloaded in
+    # `args.build_dir`, we just need to copy the .spec next to them.
+    # `fedora-review --prebuilt` runs in that directory, so it has to follow
+    # the packages rather than the other way round -- they are build inputs
+    # and are deliberately kept out of the archived TMT_PLAN_DATA.
+    shutil.copy(args.spec_file, args.build_dir)
+
+    review = fedora_review(args.spec_file, args.build_dir)
     issues = count_issues(review)
     dump_results_yaml(issues)
-    copy_fedora_review_results(args.spec_file, args.workdir)
+    copy_fedora_review_results(args.spec_file, args.build_dir)
     copy_viewer_html()
     copy_data_into_data()
 
@@ -179,9 +185,14 @@ if __name__ == "__main__":
         )
     )
     parser.add_argument(
-        "--workdir",
+        "--build-dir",
         type=Path,
-        default=os.environ.get("TMT_PLAN_DATA", "."),
+        help=(
+            "Directory holding the downloaded packages, as exported by the "
+            "prepare step. Kept outside TMT_PLAN_DATA so the packages are not "
+            "synced back and archived."
+        ),
+        default=os.environ.get("BUILD_DIR"),
     )
     parser.add_argument(
         "--spec-file",
