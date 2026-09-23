@@ -28,7 +28,8 @@ RPMLINT_TOML_FILES = [
 ]
 
 
-def export_rpmlint_tomls(custom_file: Path, workdir: Path, env_file: Path) -> None:
+def export_rpmlint_tomls(custom_file: Path) -> None:
+    workdir = utils.get_workdir()
     rpmlint_data_dir = workdir / "rpmlint"
     rpmlint_data_dir.mkdir(exist_ok=True)
     for toml_file in RPMLINT_TOML_FILES:
@@ -36,49 +37,47 @@ def export_rpmlint_tomls(custom_file: Path, workdir: Path, env_file: Path) -> No
     if custom_file.exists():
         logger.info("Found custom rpmlint.toml file")
         shutil.copy(custom_file, rpmlint_data_dir)
-    with env_file.open("a") as f:
-        f.write(f"RPMLINT_TOML_FILE={rpmlint_data_dir}\n")
+    utils.save_env("RPMLINT_TOML_FILE", rpmlint_data_dir)
 
 
-def set_config_files(config: dict[str, Any], args: argparse.Namespace) -> None:
+def set_config_files(config: dict[str, Any]) -> None:
+    workdir = utils.get_workdir()
     if rc_content := config.get("rc"):
         rc_content: str
-        rc_file: Path = args.workdir / "rpmlintrc"
+        rc_file: Path = workdir / "rpmlintrc"
         rc_file.write_text(rc_content)
-        with args.env_file.open("a") as f:
-            f.write(f"RPMLINT_RC_FILE={rc_file}\n")
-    distgit_toml_file: Path = args.workdir / "rpmlint.toml"
+        utils.save_env("RPMLINT_RC_FILE", rc_file)
+    distgit_toml_file: Path = workdir / "rpmlint.toml"
     if toml_content := config.get("toml"):
         toml_content: dict[str, Any]
         with distgit_toml_file.open("wb") as f:
             tomli_w.dump(toml_content, f)
-    export_rpmlint_tomls(distgit_toml_file, args.workdir, args.env_file)
+    export_rpmlint_tomls(distgit_toml_file)
 
 
-def get_config_fallback(dist_git_path: Path, args: argparse.Namespace) -> None:
+def get_config_fallback(dist_git_path: Path) -> None:
     rc_files = list(dist_git_path.glob("*.rpmlintrc"))
     if len(rc_files) > 1:
         logger.warning("More than 1 rpmlintrc file found")
     if rc_files:
         logger.info("Found rpmlintrc file")
-        with args.env_file.open("a") as f:
-            f.write(f"RPMLINT_RC_FILE={rc_files[0]}\n")
+        utils.save_env("RPMLINT_RC_FILE", rc_files[0])
     toml_file = dist_git_path / "rpmlint.toml"
-    export_rpmlint_tomls(toml_file, args.workdir, args.env_file)
+    export_rpmlint_tomls(toml_file)
 
 
 def main(args: argparse.Namespace) -> None:
     """
     Prepare for rpmlint from a dist-git
     """
-    dist_git_path = utils.get_dist_git(args.koji_task_id, args.workdir)
+    dist_git_path = utils.get_dist_git(args.koji_task_id)
 
     if config := utils.get_config(dist_git_path, CI_CONFIG_SECTION):
-        set_config_files(config, args)
+        set_config_files(config)
     else:
-        get_config_fallback(dist_git_path, args)
+        get_config_fallback(dist_git_path)
 
-    utils.get_koji_build(args.koji_task_id, args.workdir, args.env_file)
+    utils.get_koji_build(args.koji_task_id)
 
     # Find the other files
     # TODO: The SRPM should be enough?
@@ -86,25 +85,15 @@ def main(args: argparse.Namespace) -> None:
     if len(spec_files) > 1:
         logger.warning("More than 1 spec file found")
     if spec_files:
-        with args.env_file.open("a") as f:
-            f.write(f"SPEC_FILE={spec_files[0]}\n")
+        utils.save_env("SPEC_FILE", spec_files[0])
     else:
         logger.error("No spec file found?")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--koji-task-id", default=os.environ.get("KOJI_TASK_ID"))
-    parser.add_argument(
-        "--workdir",
-        type=Path,
-        default=os.environ.get("TMT_PLAN_DATA", "."),
-    )
-    parser.add_argument(
-        "--env-file",
-        type=Path,
-        default=os.environ.get("TMT_PLAN_ENVIRONMENT_FILE", ".env"),
-    )
 
     args = parser.parse_args()
     try:
