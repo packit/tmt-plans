@@ -7,10 +7,14 @@ import subprocess
 import shutil
 from pathlib import Path
 from enum import Enum
+import logging
 import json
 import yaml
 import utils
 import tomli_w
+
+logging.basicConfig(level="INFO")
+log = logging.getLogger(Path(__file__).name)
 
 CI_CONFIG_SECTION = "fedora-review"
 
@@ -48,7 +52,7 @@ def dump_results_yaml(issues: int, skipped: int):
         }
     ]
     path = os.path.join(os.environ.get("TMT_TEST_DATA"), "results.yaml")
-    print(f"Creating: {path}")
+    log.info("Creating: %s", path)
     with open(path, "w+") as fp:
         yaml.dump(data, fp)
 
@@ -60,13 +64,13 @@ def copy_fedora_review_results(spec_file, workdir):
     package_name = Path(spec_file).stem
     fedora_review_resultdir = workdir / f"review-{package_name}"
     test_resultdir = Path(os.environ["TMT_TEST_DATA"])
-    print(os.listdir(fedora_review_resultdir))
+    log.info(os.listdir(fedora_review_resultdir))
     for name in FEDORA_REVIEW_RESULTS:
         src = fedora_review_resultdir / name
         dst = test_resultdir / name
-        print(src)
+        log.info(src)
         if src.exists():
-            print(f"Copying {name} to the test results")
+            log.info("Copying %s to the test results", name)
             shutil.copy(src, dst)
 
 
@@ -75,7 +79,7 @@ def copy_viewer_html():
     Copy viewer.html from plan data to the result directory
     """
     viewer = "viewer.html"
-    print(f"Copying {viewer} to the test results")
+    log.info("Copying %s to the test results", viewer)
     shutil.copy(viewer, Path(os.environ["TMT_TEST_DATA"]) / viewer)
 
 
@@ -87,7 +91,7 @@ def copy_mock_fedora_ci_toml():
     we don't want to copy it from anywhere else.
     """
     filename = "fedora-ci.toml"
-    print(f"Copying {filename} to the plan data")
+    log.info("Copying %s to the plan data", filename)
     dst = Path(os.environ["TMT_PLAN_DATA"]) / "dist-git" / filename
     shutil.copy(filename, dst)
 
@@ -132,23 +136,18 @@ def fedora_review(spec_file, workdir):
     disttag = rpm_disttag(find_srpm(workdir))
     cmd.extend(["--define", f"DISTTAG={disttag}"])
 
-    print(f"Running: {" ".join(cmd)}")
-    proc = subprocess.run(
+    log.info("Running: %s", " ".join(cmd))
+    subprocess.run(
         cmd,
         cwd=workdir,
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        check=True,
     )
-    print(proc.stdout.decode("utf-8"))
-    print(proc.stderr.decode("utf-8"))
-    if proc.returncode:
-        raise RuntimeError("The fedora-review command failed")
 
     path = os.path.join(workdir, "review-" + name, "review.json")
     if not os.path.exists(path):
         raise RuntimeError(f"Result JSON doesn't exist: {path}")
-    print("Result: {0}".format(path))
+    log.info("Result: %s", path)
 
     with open(path, "r") as fp:
         review = json.load(fp)
@@ -193,7 +192,7 @@ def dump_fedora_review_config(fedora_review_config):
     path: Path = args.workdir / name
     with path.open("wb") as fp:
         tomli_w.dump(fedora_review_config, fp)
-    print(f"Copying {name} to the test results")
+    log.info("Copying %s to the test results", name)
     shutil.copy(path, Path(os.environ["TMT_TEST_DATA"]) / name)
 
 
@@ -220,7 +219,7 @@ def main(args: argparse.Namespace) -> None:
     skip = skip_checks(config)
     config["exclude"] = ",".join(skip)
     dump_fedora_review_config(config)
-    print(f"Skipping these checks: {skip}")
+    log.info("Skipping these checks: %s", skip)
 
     review = fedora_review(args.spec_file, args.workdir)
     issues = review.get("issues", [])
@@ -229,8 +228,8 @@ def main(args: argparse.Namespace) -> None:
     copy_fedora_review_results(args.spec_file, args.workdir)
     copy_viewer_html()
 
-    print(f"Skipped {len(skip)} issues")
-    print(f"Found {len(issues)} issues")
+    log.info("Skipped %s issues", len(skip))
+    log.error("Found %s issues", len(issues))
     if issues:
         sys.exit(1)
 
@@ -261,6 +260,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         main(args)
-    except RuntimeError as ex:
-        print(ex, file=sys.stderr)
+    except subprocess.CalledProcessError:
+        log.error("Fedora-review failed!")
         sys.exit(1)
+    except RuntimeError as ex:
+        log.error(str(ex))
+        log.error("Fedora-review failed!")
+        sys.exit(1)
+    except Exception as ex:
+        log.error("Unexpected error!", exc_info=ex)
+        sys.exit(2)
