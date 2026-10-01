@@ -9,9 +9,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from typing import Any
+
+    from .results import Results, TmtResult
 
 # TODO: Make this more configurable
 logging.basicConfig(level="INFO")
@@ -28,6 +33,25 @@ class TestEnv(abc.ABC):
     """
     Container for various test environment information.
     """
+
+    @functools.cached_property
+    def results(self) -> Results:
+        """
+        Main interface to interact with custom tmt test results.
+        """
+        from .results import Results
+
+        val = Results(self)
+        _ = val["/"]
+        val.save()
+        return val
+
+    @property
+    def main_result(self) -> TmtResult:
+        """
+        Shortcut to main test's results.
+        """
+        return self.results["/"]
 
     @functools.cached_property
     def env_file(self) -> Path | None:
