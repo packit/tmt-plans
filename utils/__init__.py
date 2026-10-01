@@ -14,6 +14,10 @@ from typing import Any
 
 import tomllib
 
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from .results import Results, TmtResult
+
 # TODO: Make this more configurable
 logging.basicConfig(level="INFO")
 logger = logging.getLogger("tmt_plans.utils")
@@ -29,6 +33,25 @@ class TestEnv(abc.ABC):
     """
     Container for various test environment information.
     """
+
+    @functools.cached_property
+    def results(self) -> Results:
+        """
+        Main interface to interact with custom tmt test results.
+        """
+        from .results import Results
+
+        val = Results(self)
+        _ = val["/"]
+        val.save()
+        return val
+
+    @property
+    def main_result(self) -> TmtResult:
+        """
+        Shortcut to main test's results.
+        """
+        return self.results["/"]
 
     @functools.cached_property
     def env_file(self) -> Path | None:
