@@ -16,7 +16,12 @@ from typing import Any
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
-    from . import TestEnv
+    from .test_env import TestEnv
+
+__all__ = [
+    "ResultState",
+    "Results",
+]
 
 logger = logging.getLogger("tmt_plans.utils.results")
 
