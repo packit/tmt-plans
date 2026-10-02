@@ -5,18 +5,18 @@ import os
 import subprocess
 import shutil
 from pathlib import Path
-from enum import Enum
 import logging
 import json
-import yaml
 import tomli_w
 from typing import Any
 
 from utils import TestEnv
 
+DIR = Path(__file__).parent
 log = logging.getLogger(Path(__file__).name)
 
 CI_CONFIG_SECTION = "fedora-review"
+FEDORA_REVIEW_TOML = "fedora-review.toml"
 
 # Expose these to the users
 FEDORA_REVIEW_RESULTS = [
@@ -29,32 +29,19 @@ FEDORA_REVIEW_RESULTS = [
 ]
 
 
-class Result(Enum):
-    INFO = "info"
-    FAIL = "fail"
-    PASS = "pass"
-
-
 def dump_results_yaml(test_env: TestEnv, issues: int, skipped: int):
     """
     https://tmt.readthedocs.io/en/stable/spec/results.html
     """
-    result = Result.FAIL if issues else Result.PASS
-    data = [
-        {
-            "name": "/",
-            "result": result.value,
-            "note": [
-                f"{skipped} skipped",
-                f"{issues} issues",
-            ],
-            "log": ["viewer.html", "fedora-review.toml"] + FEDORA_REVIEW_RESULTS,
-        }
+    test_env.main_result.result = "fail" if issues else "pass"
+    test_env.main_result.note = [
+        f"{skipped} skipped",
+        f"{issues} issues",
     ]
-    path = test_env.test_data / "results.yaml"
-    log.info("Creating: %s", path)
-    with open(path, "w+") as fp:
-        yaml.dump(data, fp)
+    test_env.main_result.add_viewer_html(DIR / "viewer.html")
+    test_env.main_result.add_log(test_env.workdir / FEDORA_REVIEW_TOML)
+    copy_fedora_review_results(test_env)
+    test_env.results.save()
 
 
 def copy_fedora_review_results(test_env: TestEnv) -> None:
@@ -64,21 +51,7 @@ def copy_fedora_review_results(test_env: TestEnv) -> None:
     fedora_review_resultdir = test_env.workdir / f"review-{test_env.srpm_name}"
     log.info(os.listdir(fedora_review_resultdir))
     for name in FEDORA_REVIEW_RESULTS:
-        src = fedora_review_resultdir / name
-        dst = test_env.test_data / name
-        log.info(src)
-        if src.exists():
-            log.info("Copying %s to the test results", name)
-            shutil.copy(src, dst)
-
-
-def copy_viewer_html(test_env: TestEnv):
-    """
-    Copy viewer.html from plan data to the result directory
-    """
-    viewer = "viewer.html"
-    log.info("Copying %s to the test results", viewer)
-    shutil.copy(viewer, test_env.test_data / viewer)
+        test_env.main_result.add_log(fedora_review_resultdir / name, missing_ok=True)
 
 
 def copy_mock_fedora_ci_toml(test_env: TestEnv):
@@ -110,7 +83,7 @@ def fedora_review(test_env: TestEnv) -> dict[str, Any]:
     env = os.environ.copy()
     env["REVIEW_NO_MOCKGROUP_CHECK"] = "true"
 
-    config = str(test_env.workdir / "fedora-review.toml")
+    config = str(test_env.workdir / FEDORA_REVIEW_TOML)
     name = test_env.srpm_name
     cmd = ["fedora-review", "--config", config, "--prebuilt", "-n", name]
 
@@ -164,12 +137,8 @@ def skip_checks(config):
 
 
 def dump_fedora_review_config(test_env: TestEnv, fedora_review_config):
-    name = "fedora-review.toml"
-    path: Path = test_env.workdir / name
-    with path.open("wb") as fp:
+    with (test_env.workdir / FEDORA_REVIEW_TOML).open("wb") as fp:
         tomli_w.dump(fedora_review_config, fp)
-    log.info("Copying %s to the test results", name)
-    shutil.copy(path, test_env.test_data / name)
 
 
 def main(test_env: TestEnv) -> None:
@@ -201,8 +170,6 @@ def main(test_env: TestEnv) -> None:
     issues = review.get("issues", [])
 
     dump_results_yaml(test_env, len(issues), len(skip))
-    copy_fedora_review_results(test_env)
-    copy_viewer_html(test_env)
 
     log.info("Skipped %s issues", len(skip))
     log.error("Found %s issues", len(issues))
