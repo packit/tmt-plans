@@ -124,7 +124,7 @@ def fedora_review(spec_file, workdir):
     env = os.environ.copy()
     env["REVIEW_NO_MOCKGROUP_CHECK"] = "true"
 
-    config = str(args.workdir / "fedora-review.toml")
+    config = str(workdir / "fedora-review.toml")
     name = Path(spec_file).stem
     cmd = ["fedora-review", "--config", config, "--prebuilt", "-n", name]
 
@@ -181,15 +181,15 @@ def parse_fedora_review_toml(workdir: Path):
     """
     Parse the fedora-review.toml out of the fedora-ci.toml
     """
-    dist_git_path = args.workdir / "dist-git"
+    dist_git_path = workdir / "dist-git"
     if config := utils.get_config(dist_git_path, CI_CONFIG_SECTION):
         return config
     return {}
 
 
-def dump_fedora_review_config(fedora_review_config):
+def dump_fedora_review_config(workdir: Path, fedora_review_config):
     name = "fedora-review.toml"
-    path: Path = args.workdir / name
+    path: Path = workdir / name
     with path.open("wb") as fp:
         tomli_w.dump(fedora_review_config, fp)
     log.info("Copying %s to the test results", name)
@@ -208,24 +208,25 @@ def main(args: argparse.Namespace) -> None:
 
     # At this point, the RPM packages are already downloaded in `args.workdir`,
     # we just need to copy the .spec next to them
-    shutil.copy(args.spec_file, args.workdir)
+    workdir = utils.get_workdir()
+    shutil.copy(args.spec_file, workdir)
 
     # Uncomment if needed for development purposes
     # copy_mock_fedora_ci_toml()
 
     # Parse the `fedora-review config` aout of the `fedora-ci.toml`, update
     # the list of excluded checks and save it as `fedora-review.toml`.
-    config = parse_fedora_review_toml(args.workdir)
+    config = parse_fedora_review_toml(workdir)
     skip = skip_checks(config)
     config["exclude"] = ",".join(skip)
-    dump_fedora_review_config(config)
+    dump_fedora_review_config(workdir, config)
     log.info("Skipping these checks: %s", skip)
 
-    review = fedora_review(args.spec_file, args.workdir)
+    review = fedora_review(args.spec_file, workdir)
     issues = review.get("issues", [])
 
     dump_results_yaml(len(issues), len(skip))
-    copy_fedora_review_results(args.spec_file, args.workdir)
+    copy_fedora_review_results(args.spec_file, workdir)
     copy_viewer_html()
 
     log.info("Skipped %s issues", len(skip))
@@ -240,11 +241,6 @@ if __name__ == "__main__":
             "Simple wrapper for fedora-review. "
             "Can also pass variables via environment variables."
         )
-    )
-    parser.add_argument(
-        "--workdir",
-        type=Path,
-        default=os.environ.get("TMT_PLAN_DATA", "."),
     )
     parser.add_argument(
         "--spec-file",

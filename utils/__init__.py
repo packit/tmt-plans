@@ -1,8 +1,11 @@
+import functools
 import logging
 import re
 import sys
 import subprocess
 import tomllib
+import tempfile
+import os
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +16,36 @@ CI_CONFIG_FILES = [
     "fedora-ci.yml",
     "fedora-ci.toml",
 ]
+
+
+@functools.cache
+def get_env_file() -> Path | None:
+    env_file = os.environ.get("TMT_PLAN_ENVIRONMENT_FILE")
+    return Path(env_file) if env_file else None
+
+
+def save_env(name: str, value: Any) -> None:
+    if not (env_file := get_env_file()):
+        return
+    with env_file.open("a") as f:
+        f.write(f"{name}={value!s}\n")
+
+
+@functools.cache
+def get_workdir() -> Path:
+    """
+    Get or generate a temporary workdir used across tests.
+
+    We do not expect any reboot in these tests, so we can use a ``/tmp`` path.
+    Avoid using paths like ``TMT_PLAN_DATA`` because we do not want these to be
+    synced back to testing-farm artifact storage.
+    """
+    workdir = os.environ.get("WORKDIR")
+    if not workdir:
+        workdir = tempfile.mkdtemp(prefix="tmt-test-workdir-")
+        save_env("WORKDIR", workdir)
+    logger.info(f"Temporary workdir: {workdir}")
+    return Path(workdir)
 
 
 def get_config(dist_git_path: Path, section: str) -> dict[str, Any] | None:
@@ -43,7 +76,8 @@ def get_config(dist_git_path: Path, section: str) -> dict[str, Any] | None:
     return config
 
 
-def get_dist_git(koji_task_id: str, workdir: Path) -> Path:
+def get_dist_git(koji_task_id: str) -> Path:
+    workdir = get_workdir()
     result = subprocess.run(
         [
             "koji",
@@ -83,15 +117,12 @@ def get_dist_git(koji_task_id: str, workdir: Path) -> Path:
     return dist_git_path
 
 
-def get_koji_build(
-    koji_task_id: str, workdir: Path, env_file: Path | None = None
-) -> None:
+def get_koji_build(koji_task_id: str) -> None:
     # TODO: Migrate these to tmt artifacts when possible
+    workdir = get_workdir()
     subprocess.run(
         ["koji", "download-task", koji_task_id],
         cwd=workdir,
         check=True,
     )
-    if env_file:
-        with env_file.open("a") as f:
-            f.write(f"RPM_FILES={workdir}/*.rpm\n")
+    save_env("RPM_FILES", f"{workdir}/*.rpm")
