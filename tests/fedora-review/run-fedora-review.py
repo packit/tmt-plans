@@ -187,7 +187,7 @@ def parse_fedora_review_toml(workdir: Path):
     return {}
 
 
-def dump_fedora_review_config(workdir:Path, fedora_review_config):
+def dump_fedora_review_config(workdir: Path, fedora_review_config):
     name = "fedora-review.toml"
     path: Path = workdir / name
     with path.open("wb") as fp:
