@@ -69,16 +69,19 @@ rlJournalStart
 		[[ -n "${RPMINSPECT_SUPPRESS}" ]] && rlRun "args=\"\$args --suppress=${RPMINSPECT_SUPPRESS}\"" 0 "Set args: Suppress threshold"
 		rlRun "args=\"\$args ./inspect_builds/$PACKIT_PACKAGE_NVR\" && echo \$args" 0 "Set args: Set downloaded source as after_build"
 	  rlRun "/usr/bin/rpminspect $args" 0 "Run rpminspect"
-		# Get the number of BAD and VERIFY check results
-		# Note about jq syntax used:
-		# - .[][]               : collapse the dict of list of objects into a series of objects
-		# - select(.result ...) : filter the series of objects by the `result` value
-		# - [ ... ] | length    : create a list of the filtered object series and count the length
-		rlRun "bad_results=\$(jq '[.[][] | select(.result == \"BAD\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the BAD check results"
-		rlRun "verify_results=\$(jq '[.[][] | select(.result == \"VERIFY\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the VERIFY check results"
-		rlRun "info_results=\$(jq '[.[][] | select(.result == \"INFO\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the INFO check results"
-		rlRun "ok_results=\$(jq '[.[][] | select(.result == \"OK\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the OK check results"
-		rlRun "cp $TMT_PLAN_DATA/viewer.html $TMT_TEST_DATA/viewer.html"
+	  # Calculate results only if result.json was produced
+	  if [[ -f "$TMT_TEST_DATA/result.json" ]]; then
+			# Get the number of BAD and VERIFY check results
+			# Note about jq syntax used:
+			# - .[][]               : collapse the dict of list of objects into a series of objects
+			# - select(.result ...) : filter the series of objects by the `result` value
+			# - [ ... ] | length    : create a list of the filtered object series and count the length
+			rlRun "bad_results=\$(jq '[.[][] | select(.result == \"BAD\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the BAD check results"
+			rlRun "verify_results=\$(jq '[.[][] | select(.result == \"VERIFY\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the VERIFY check results"
+			rlRun "info_results=\$(jq '[.[][] | select(.result == \"INFO\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the INFO check results"
+			rlRun "ok_results=\$(jq '[.[][] | select(.result == \"OK\")] | length' $TMT_TEST_DATA/result.json)" 0 "Count the OK check results"
+			rlRun "cp $TMT_PLAN_DATA/viewer.html $TMT_TEST_DATA/viewer.html"
+		fi
 	rlPhaseEnd
 
 	rlPhaseStartCleanup
@@ -107,14 +110,27 @@ else
 	fi
 fi
 # Write the actual results.yaml
-cat <<EOF >> "$TMT_TEST_DATA/results.yaml"
-- name: /
-  result: ${result}
-  note: ${bad_results} BAD, ${verify_results} VERIFY, ${info_results} INFO, ${ok_results} OK
-  log:
-    - ../output.txt
-    - ../journal.txt
-    - ../journal.xml
-    - viewer.html
-    - result.json
-EOF
+if [[ -f "$TMT_TEST_DATA/results.json" ]]; then
+	# Add rpminspect results
+	cat <<-EOF >> "$TMT_TEST_DATA/results.yaml"
+	- name: /
+		result: ${result}
+		note: ${bad_results} BAD, ${verify_results} VERIFY, ${info_results} INFO, ${ok_results} OK
+		log:
+			- ../output.txt
+			- ../journal.txt
+			- ../journal.xml
+			- viewer.html
+			- result.json
+	EOF
+else
+	# Add the beakerlib data only
+	cat <<-EOF >> "$TMT_TEST_DATA/results.yaml"
+	- name: /
+		result: ${result}
+		log:
+			- ../output.txt
+			- ../journal.txt
+			- ../journal.xml
+	EOF
+fi
