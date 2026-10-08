@@ -19,14 +19,14 @@ if TYPE_CHECKING:
     from .test_env import TestEnv
 
 __all__ = [
-    "ResultState",
+    "Result",
     "Results",
 ]
 
 logger = logging.getLogger("tmt_plans.utils.results")
 
 
-class ResultState(enum.IntEnum):
+class Result(enum.IntEnum):
     """
     Result states supported by tmt.
 
@@ -44,7 +44,7 @@ class ResultState(enum.IntEnum):
     # We want IntEnum to be able to easily compare, but would also be nice to
     # initialize via `ResultState("pass")`, so we need this `_missing_` for that.
     @classmethod
-    def _missing_(cls, value: Any) -> ResultState | None:
+    def _missing_(cls, value: Any) -> Result | None:
         if isinstance(value, str):
             try:
                 return cls[value.upper()]
@@ -126,7 +126,7 @@ class Results(Mapping[str, "TmtResult"]):
                 self._results[key].start()
         return self._results[key]
 
-    def __setitem__(self, key: str, value: TmtResult | str | ResultState) -> None:
+    def __setitem__(self, key: str, value: TmtResult | str | Result) -> None:
         if isinstance(value, TmtResult):
             if key != value.name:
                 raise ValueError(
@@ -134,9 +134,9 @@ class Results(Mapping[str, "TmtResult"]):
                 )
             self._results[key] = value
         elif isinstance(value, str):
-            result = ResultState(value)
+            result = Result(value)
             self._results[key].result = result
-        elif isinstance(value, ResultState):
+        elif isinstance(value, Result):
             self._results[key].result = value
         else:
             raise TypeError(f"Unsupported value type: {value} [{type(value)}]")
@@ -204,7 +204,7 @@ class TmtResult:
     """
 
     name: str
-    _result: ResultState = ResultState.PENDING
+    _result: Result = Result.PENDING
     log: list[str] = field(default_factory=list)
     note: list[str] = field(default_factory=list)
     subresult: Results = field(init=False)
@@ -217,14 +217,14 @@ class TmtResult:
         self.subresult = Results(self)
 
     @property
-    def result(self) -> ResultState:
+    def result(self) -> Result:
         return self._result
 
     @result.setter
-    def result(self, value: str | ResultState) -> None:
+    def result(self, value: str | Result) -> None:
         if isinstance(value, str):
-            self._result = ResultState(value)
-        elif isinstance(value, ResultState):
+            self._result = Result(value)
+        elif isinstance(value, Result):
             self._result = value
         else:
             raise ValueError(f"Unsupported value {value} [{type(value)}]")
@@ -289,7 +289,7 @@ class TmtResult:
             shutil.copy(file, self._parent.test_data / log_entry)
         return log_entry
 
-    def add_log(self, file: Path, missing_ok: bool = False) -> None:
+    def add_file(self, file: Path, missing_ok: bool = False) -> None:
         """
         Add a file as a log entry to the results.
 
