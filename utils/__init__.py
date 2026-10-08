@@ -1,7 +1,7 @@
-from .results import ResultState
+from .results import Result
 from .test_env import TestEnv
 
 __all__ = [
-    "ResultState",
+    "Result",
     "TestEnv",
 ]

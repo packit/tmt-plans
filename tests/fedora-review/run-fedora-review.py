@@ -10,7 +10,7 @@ import json
 import tomli_w
 from typing import Any
 
-from utils import TestEnv
+from utils import Result, TestEnv
 
 DIR = Path(__file__).parent
 log = logging.getLogger(Path(__file__).name)
@@ -33,13 +33,13 @@ def dump_results_yaml(test_env: TestEnv, issues: int, skipped: int):
     """
     https://tmt.readthedocs.io/en/stable/spec/results.html
     """
-    test_env.main_result.result = "fail" if issues else "pass"
+    test_env.main_result.result = Result.FAIL if issues else Result.PASS
     test_env.main_result.note = [
         f"{skipped} skipped",
         f"{issues} issues",
     ]
     test_env.main_result.add_viewer_html(DIR / "viewer.html")
-    test_env.main_result.add_log(test_env.workdir / FEDORA_REVIEW_TOML)
+    test_env.main_result.add_file(test_env.workdir / FEDORA_REVIEW_TOML)
     copy_fedora_review_results(test_env)
     test_env.results.save()
 
@@ -51,7 +51,7 @@ def copy_fedora_review_results(test_env: TestEnv) -> None:
     fedora_review_resultdir = test_env.workdir / f"review-{test_env.srpm_name}"
     log.info(os.listdir(fedora_review_resultdir))
     for name in FEDORA_REVIEW_RESULTS:
-        test_env.main_result.add_log(fedora_review_resultdir / name, missing_ok=True)
+        test_env.main_result.add_file(fedora_review_resultdir / name, missing_ok=True)
 
 
 def copy_mock_fedora_ci_toml(test_env: TestEnv):
