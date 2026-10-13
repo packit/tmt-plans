@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import functools
 import logging
-import re
-import sys
-import subprocess
-import tomllib
-import tempfile
 import os
+import re
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +56,11 @@ def get_workdir() -> Path:
 
 def get_config(dist_git_path: Path, section: str) -> dict[str, Any] | None:
     from ruamel.yaml import YAML
+
+    if sys.version_info < (3, 11):
+        import tomli as tomllib
+    else:
+        import tomllib
 
     for ci_file_name in CI_CONFIG_FILES:
         ci_file = dist_git_path / ci_file_name
