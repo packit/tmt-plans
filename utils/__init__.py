@@ -36,13 +36,18 @@ def get_workdir() -> Path:
     """
     Get or generate a temporary workdir used across tests.
 
-    We do not expect any reboot in these tests, so we can use a ``/tmp`` path.
     Avoid using paths like ``TMT_PLAN_DATA`` because we do not want these to be
     synced back to testing-farm artifact storage.
+
+    We default to ``/var/tmp`` since the default ``/tmp`` may not have enough
+    storage. The user would be responsible for sanitizing the workdir in this case.
     """
     workdir = os.environ.get("WORKDIR")
     if not workdir:
-        workdir = tempfile.mkdtemp(prefix="tmt-test-workdir-")
+        workdir = tempfile.mkdtemp(
+            prefix="tmt-test-workdir-",
+            dir=os.environ.get("TMPDIR", "/var/tmp"),
+        )
         save_env("WORKDIR", workdir)
     logger.info(f"Temporary workdir: {workdir}")
     return Path(workdir)
