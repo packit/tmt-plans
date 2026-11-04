@@ -11,7 +11,6 @@ import sys
 import tempfile
 import requests
 from pathlib import Path
-from copr.v3 import Client
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
@@ -368,6 +367,8 @@ class CoprTestEnv(TestEnv):
     # TODO: Currently a packit job is assumed
 
     def __init__(self, copr_build_id: int) -> None:
+        from copr.v3 import Client
+
         self.build_id = copr_build_id
         self.chroot = os.environ.get(
             "PACKIT_COPR_CHROOT",
