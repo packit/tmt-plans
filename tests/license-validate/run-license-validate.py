@@ -13,11 +13,20 @@ logger = logging.getLogger(Path(__file__).name)
 
 
 def main(args: argparse.Namespace) -> None:
-    component_name = os.path.basename(args.spec_file).removesuffix('.spec')
+    component_name = os.path.basename(args.spec_file).removesuffix(".spec")
 
-    logger.info(f"Running: license-validate -v --spec {args.spec_file} --package {component_name}")
+    logger.info(
+        f"Running: license-validate -v --spec {args.spec_file} --package {component_name}"
+    )
     subprocess.run(
-        ["license-validate", "-v", "--spec", args.spec_file, "--package", component_name],
+        [
+            "license-validate",
+            "-v",
+            "--spec",
+            args.spec_file,
+            "--package",
+            component_name,
+        ],
         check=True,
     )
 
