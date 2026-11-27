@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import sys
 import os
 import subprocess
 import shutil
@@ -100,12 +99,13 @@ def fedora_review(test_env: TestEnv) -> dict[str, Any]:
         cmd,
         cwd=test_env.workdir,
         env=env,
-        check=True,
+        check=False,
     )
 
     path = os.path.join(test_env.workdir, "review-" + name, "review.json")
     if not os.path.exists(path):
-        raise RuntimeError(f"Result JSON doesn't exist: {path}")
+        log.error("Result JSON doesn't exist: %s", path)
+        raise SystemExit(1)
     log.info("Result: %s", path)
 
     with open(path, "r") as fp:
@@ -146,10 +146,12 @@ def main(test_env: TestEnv) -> None:
     Run fedora-review plan
     """
     if not test_env.spec_file:
-        raise RuntimeError("No spec file provided")
+        log.error("No spec file provided")
+        raise SystemExit(1)
 
     if not test_env.rpms:
-        raise RuntimeError("No RPM files provided")
+        log.error("No RPM files provided")
+        raise SystemExit(1)
 
     # At this point, the RPM packages are already downloaded in `args.workdir`,
     # we just need to copy the .spec next to them
@@ -174,7 +176,7 @@ def main(test_env: TestEnv) -> None:
     log.info("Skipped %s issues", len(skip))
     log.error("Found %s issues", len(issues))
     if issues:
-        sys.exit(1)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
@@ -182,13 +184,9 @@ if __name__ == "__main__":
 
     try:
         main(env)
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, SystemExit):
         log.error("Fedora-review failed!")
-        sys.exit(1)
-    except RuntimeError as ex:
-        log.error(str(ex))
-        log.error("Fedora-review failed!")
-        sys.exit(1)
+        raise SystemExit(1)
     except Exception as ex:
         log.error("Unexpected error!", exc_info=ex)
-        sys.exit(2)
+        raise SystemExit(2)
