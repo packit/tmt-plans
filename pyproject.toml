@@ -1,0 +1,26 @@
+[tool.ruff.lint]
+select = [
+    "ALL",
+]
+ignore = [
+    "D200",  # unnecessary multiline docstring
+    "FIX002",  # line contains todo
+    "S113",  # request without timeout
+    "S603",  # subprocess without shell equals true
+    "S607",  # start process with partial path
+    "TD",  # flake8-todos
+    "TRY400",  # error instead of exception
+]
+pydocstyle.convention = "pep257"
+flake8-tidy-imports.banned-module-level-imports = [
+    "copr",
+    "requests",
+    "ruamel.yaml",
+    "tomli",
+    "tomli-w",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = [
+    "TID253",  # banned module level imports
+]
