@@ -2,6 +2,7 @@
 # /// script
 # dependencies = []
 # ///
+from __future__ import annotations
 
 import logging
 import subprocess
@@ -16,12 +17,12 @@ if __name__ == "__main__":
         env = TestEnv.from_env_variables()
         # Try to get the rpms and config files
         env.get_rpms()
-        env.config
+        env.config  # noqa: B018
     except SystemExit:
         raise
     except subprocess.CalledProcessError:
         logger.error("Preparation failed!")
-        raise SystemExit(1)
+        raise SystemExit(1) from None
     except Exception as exc:
-        logger.error("Unexpected failure", exc_info=exc)
-        raise SystemExit(2)
+        logger.exception("Unexpected failure", exc_info=exc)
+        raise SystemExit(2) from None

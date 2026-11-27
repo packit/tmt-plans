@@ -4,6 +4,7 @@
 #   "tomli-w",
 # ]
 # ///
+from __future__ import annotations
 
 import logging
 import shutil
@@ -30,8 +31,9 @@ def prepare(env: TestEnv) -> None:
     """
     - Get the rpms
     - Get config files/settings (``*.rpmlintrc`` and ``rpmint.toml``)
-    """
-    global rc_file
+    """  # noqa: D205,D400
+    # TODO: Do not use this global anymore
+    global rc_file  # noqa: PLW0603
 
     env.get_rpms()
     rpmlint_data_dir = env.workdir / "rpmlint"
@@ -62,7 +64,7 @@ def prepare(env: TestEnv) -> None:
 
 def main(env: TestEnv) -> None:
     """
-    Run rpmlint
+    Run rpmlint.
     """
     rpmlint_args = []
     if rc_file:
@@ -70,7 +72,7 @@ def main(env: TestEnv) -> None:
     rpmlint_args.extend(["-c", env.workdir / "rpmlint"])
     rpmlint_args.append(str(env.spec_file))
     rpmlint_args.extend([str(rpm) for rpm in env.rpms])
-    logger.info(f"Running rpmlint with: {rpmlint_args}")
+    logger.info("Running rpmlint with: %s", rpmlint_args)
     subprocess.run(
         ["rpmlint", *rpmlint_args],
         check=True,
@@ -86,7 +88,7 @@ if __name__ == "__main__":
         raise
     except subprocess.CalledProcessError:
         logger.error("Rpmlint failed!")
-        raise SystemExit(1)
+        raise SystemExit(1) from None
     except Exception as exc:
-        logger.error("Unexpected rpmlint failure", exc_info=exc)
-        raise SystemExit(2)
+        logger.exception("Unexpected rpmlint failure", exc_info=exc)
+        raise SystemExit(2) from None
