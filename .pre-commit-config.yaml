@@ -27,6 +27,11 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
 
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v2.4.1"
+    hooks:
+      - id: mypy
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.6
     hooks:
