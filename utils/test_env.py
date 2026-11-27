@@ -1,3 +1,7 @@
+"""
+Test environment navigation helpers.
+"""
+
 from __future__ import annotations
 
 import abc
@@ -5,11 +9,9 @@ import functools
 import logging
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
-import requests
 from pathlib import Path
 
 TYPE_CHECKING = False
@@ -44,7 +46,7 @@ class TestEnv(abc.ABC):
         """
         Main interface to interact with custom tmt test results.
         """
-        from .results import Results
+        from .results import Results  # noqa: PLC0415
 
         val = Results(self)
         _ = val["/"]
@@ -66,7 +68,7 @@ class TestEnv(abc.ABC):
         env_file = os.environ.get("TMT_PLAN_ENVIRONMENT_FILE")
         return Path(env_file) if env_file else None
 
-    def save_env(self, name: str, value: Any) -> None:
+    def save_env(self, name: str, value: Any) -> None:  # noqa: ANN401
         """
         Save an environment variable across tests.
         """
@@ -80,7 +82,6 @@ class TestEnv(abc.ABC):
         """
         Get or generate a temporary workdir used across tests.
 
-
         Avoid using paths like ``TMT_PLAN_DATA`` because we do not want these to be
         synced back to testing-farm artifact storage.
 
@@ -91,10 +92,10 @@ class TestEnv(abc.ABC):
         if not workdir:
             workdir = tempfile.mkdtemp(
                 prefix="tmt-test-workdir-",
-                dir=os.environ.get("TMPDIR", "/var/tmp"),
+                dir=os.environ.get("TMPDIR", "/var/tmp"),  # noqa: S108
             )
             self.save_env("WORKDIR", workdir)
-        logger.info(f"Temporary workdir: {workdir}")
+        logger.info("Temporary workdir: %s", workdir)
         return Path(workdir)
 
     @functools.cached_property
@@ -134,7 +135,6 @@ class TestEnv(abc.ABC):
         """
         Original spec file associated with the artifacts.
         """
-
         if spec_file_env := os.environ.get("SPEC_FILE"):
             return Path(spec_file_env)
 
@@ -145,7 +145,7 @@ class TestEnv(abc.ABC):
             logger.error("No spec file found?")
             raise SystemExit(1)
         spec_file = discovered_spec_files[0]
-        logger.info(f"Spec file: {spec_file}")
+        logger.info("Spec file: %s", spec_file)
         self.save_env("SPEC_FILE", spec_file)
         return spec_file
 
@@ -185,7 +185,7 @@ class TestEnv(abc.ABC):
             return next(rpm for rpm in self.rpms if rpm.name.endswith(".src.rpm"))
         except StopIteration:
             logger.error("SRPM file not found!")
-            raise SystemExit(1)
+            raise SystemExit(1) from None
 
     @property
     def binary_rpms(self) -> Iterable[Path]:
@@ -204,7 +204,7 @@ class TestEnv(abc.ABC):
         """
         for ci_file_name in CI_CONFIG_FILES:
             if (ci_file := self.git_dir / ci_file_name).exists():
-                logger.info(f"Found config file {ci_file_name}")
+                logger.info("Found config file %s", ci_file_name)
                 return ci_file
         logger.info("No fedora-ci config files.")
         return None
@@ -219,7 +219,7 @@ class TestEnv(abc.ABC):
         if sys.version_info < (3, 11):
             import tomli as tomllib
         else:
-            import tomllib
+            import tomllib  # noqa: PLC0415
 
         if not self.config_file:
             return None
@@ -230,16 +230,15 @@ class TestEnv(abc.ABC):
             elif self.config_file.suffix in [".yaml", ".yml"]:
                 config = YAML().load(f)
             else:
-                raise AssertionError(
-                    "Trying to load a file not listed in CI_CONFIG_FILES"
-                )
+                msg = "Trying to load a file not listed in CI_CONFIG_FILES"
+                raise AssertionError(msg)
         if config is None:
             return None
         if not isinstance(config, dict):
-            logger.warning(f"Config file is in an unexpected format: {type(config)}")
+            logger.warning("Config file is in an unexpected format: %s", type(config))
             return None
 
-        logger.info(f"Config file content:\n{self.config_file.read_text()}")
+        logger.info("Config file content:\n%s", self.config_file.read_text())
         return config
 
     @functools.cache
@@ -253,18 +252,23 @@ class TestEnv(abc.ABC):
             logger.info("No `tools` section found")
             return None
         if not (config := tools.get(section)):
-            logger.info(f"No `tools.{section}` section found")
+            logger.info("No `tools.%s` section found", section)
             return None
+        assert isinstance(config, dict)
         return config
 
     @classmethod
     def from_env_variables(cls) -> TestEnv:
+        """
+        Get the ``TestEnv`` from the current environment.
+        """
         if copr_build_id := os.environ.get("PACKIT_COPR_BUILD_ID"):
             return CoprTestEnv(int(copr_build_id))
         if koji_task_id := os.environ.get("KOJI_TASK_ID"):
             return KojiTestEnv(koji_task_id)
         logger.warning(
-            "Could not determine the environment, assuming environment variables are set."
+            "Could not determine the environment, assuming environment variables are "
+            "set.",
         )
         return CachedEnv()
 
@@ -295,7 +299,7 @@ class KojiTestEnv(TestEnv):
     @functools.cache
     def get_task_info(self) -> str:
         """
-        Get the ``koji taskinfo``
+        Get the ``koji taskinfo``.
         """
         # TODO: Maybe we can parse this better
         result = subprocess.run(
@@ -311,7 +315,7 @@ class KojiTestEnv(TestEnv):
         )
         task_info = result.stdout
         task_error = result.stderr
-        logger.info(f"Task info output:\n{task_info}\nTask error:\n{task_error}")
+        logger.info("Task info output:\n%s\nTask error:\n%s", task_info, task_error)
         return task_info
 
     @functools.cached_property
@@ -325,11 +329,13 @@ class KojiTestEnv(TestEnv):
         source_match_obj = re.search(r"Source:\s*(.*)", self.get_task_info())
         if source_match_obj is None:
             logger.error(
-                "Could not find 'Source:' in koji taskinfo output. Maybe a 500 error? Please retry."
+                "Could not find 'Source:' in koji taskinfo output. Maybe a 500 error? "
+                "Please retry.",
             )
             raise SystemExit(1)
         source = source_match_obj.group(1)
         source_match = re.search(r"git\+(?P<url>.*)#(?P<ref>.*)", source)
+        assert source_match is not None
         repo_url = source_match.group("url")
         repo_ref = source_match.group("ref")
 
@@ -347,7 +353,7 @@ class KojiTestEnv(TestEnv):
         self.save_env("DIST_GIT_PATH", dist_git_path)
         return dist_git_path
 
-    def get_rpms(self):
+    def get_rpms(self) -> None:
         subprocess.run(
             ["koji", "download-task", self.task_id],
             cwd=self.workdir,
@@ -392,9 +398,9 @@ class CoprTestEnv(TestEnv):
         try:
             url = os.environ["PACKIT_TARGET_URL"]
             ref = os.environ["PACKIT_TARGET_SHA"]
-        except KeyError:
+        except KeyError as err:
             logger.error("Did not find expected packit environment variables!")
-            raise SystemExit(2)
+            raise SystemExit(2) from err
         dist_git_path = self.workdir / "dist-git"
         subprocess.run(
             ["git", "clone", url, dist_git_path],
@@ -410,6 +416,8 @@ class CoprTestEnv(TestEnv):
         return dist_git_path
 
     def get_rpms(self) -> None:
+        import requests
+
         urls = self.client.build_chroot_proxy.get_results_urls(
             self.build_id,
             self.chroot,

@@ -1,9 +1,10 @@
 """
-Interface to manipulate tmt custom results
+Interface to manipulate tmt custom results.
 """
 
 from __future__ import annotations
 
+import contextlib
 import datetime
 import enum
 import functools
@@ -11,11 +12,12 @@ import logging
 import shutil
 from collections.abc import Iterator, Mapping
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
 from typing import Any
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from .test_env import TestEnv
 
 __all__ = [
@@ -44,7 +46,7 @@ class Result(enum.IntEnum):
     # We want IntEnum to be able to easily compare, but would also be nice to
     # initialize via `ResultState("pass")`, so we need this `_missing_` for that.
     @classmethod
-    def _missing_(cls, value: Any) -> Result | None:
+    def _missing_(cls, value: Any) -> Result | None:  # noqa: ANN401
         if isinstance(value, str):
             try:
                 return cls[value.upper()]
@@ -88,7 +90,8 @@ class Results(Mapping[str, "TmtResult"]):
     * If a test has ``subresult``, the main test result is derived automatically as the highest
       ``ResultState`` in the ``subresult``
 
-    By default, tests do not have durations, and in order to add one, you have to measure it manually as
+    By default, tests do not have durations, and in order to add one, you have to measure it
+    manually as:
 
     .. code-block:: python
 
@@ -111,13 +114,13 @@ class Results(Mapping[str, "TmtResult"]):
     _parent: TmtResult | TestEnv
 
     auto_stopwatch: bool = False
-    """Trigger a test's stopwatch as soon as a test is created and when the """
+    """Trigger a test's stopwatch as soon as a test is created."""
 
     def __init__(self, parent: TmtResult | TestEnv) -> None:
         self._results = {}
         self._parent = parent
         if isinstance(parent, TmtResult):
-            self.auto_stopwatch = parent._parent.auto_stopwatch
+            self.auto_stopwatch = parent._parent.auto_stopwatch  # noqa: SLF001
 
     def __getitem__(self, key: str, /) -> TmtResult:
         if key not in self._results:
@@ -129,17 +132,17 @@ class Results(Mapping[str, "TmtResult"]):
     def __setitem__(self, key: str, value: TmtResult | str | Result) -> None:
         if isinstance(value, TmtResult):
             if key != value.name:
-                raise ValueError(
-                    f"The key and result name do not match: {key} != {value.name}"
-                )
+                msg = f"The key and result name do not match: {key} != {value.name}"
+                raise ValueError(msg)
             self._results[key] = value
         elif isinstance(value, str):
-            result = Result(value)
+            result = Result(value)  # type: ignore[arg-type]
             self._results[key].result = result
         elif isinstance(value, Result):
             self._results[key].result = value
         else:
-            raise TypeError(f"Unsupported value type: {value} [{type(value)}]")
+            msg = f"Unsupported value type: {value} [{type(value)}]"
+            raise TypeError(msg)
 
     def __len__(self) -> int:
         return len(self._results)
@@ -155,7 +158,7 @@ class Results(Mapping[str, "TmtResult"]):
         parent = self._parent
         while isinstance(parent, TmtResult):
             # Results -> TmtResult -> Results
-            parent = parent._parent._parent
+            parent = parent._parent._parent  # noqa: SLF001
         return parent.test_data
 
     def save(self) -> None:
@@ -182,7 +185,7 @@ class StopWatch:
 
     def format(self) -> str | None:
         """
-        See helper duration format from ``tmt.utils``
+        See helper duration format from ``tmt.utils``.
         """
         if not self.end:
             return None
@@ -223,11 +226,12 @@ class TmtResult:
     @result.setter
     def result(self, value: str | Result) -> None:
         if isinstance(value, str):
-            self._result = Result(value)
+            self._result = Result(value)  # type: ignore[arg-type]
         elif isinstance(value, Result):
             self._result = value
         else:
-            raise ValueError(f"Unsupported value {value} [{type(value)}]")
+            msg = f"Unsupported value {value} [{type(value)}]"
+            raise TypeError(msg)
         if self._parent.auto_stopwatch:
             self.finish()
 
@@ -263,17 +267,18 @@ class TmtResult:
 
     def finish(self) -> None:
         """
-        Finish measuring the test duration
+        Finish measuring the test duration.
         """
-        self._stopwatch.end = datetime.datetime.now()
+        assert self._stopwatch is not None
+        self._stopwatch.end = datetime.datetime.now(tz=datetime.timezone.utc)
         self.duration = self._stopwatch.format()
 
-    def _copy_log_file(self, file: Path, missing_ok: bool = False) -> str:
+    def _copy_log_file(self, file: Path, *, missing_ok: bool = False) -> str:
         """
         Prepare a file to be added to the log entry.
 
-        :param file: path to the log file. If it is an absolute path the file is first copied
-          to ``TMT_TEST_DATA``
+        :param file: path to the log file. If it is an absolute path the file is first
+          copied to ``TMT_TEST_DATA``
         :param missing_ok: do not add the log entry if the file is missing
         :return: log entry in the results
         :raise FileNotFoundError: if ``missing_ok=False`` and ``file`` does not exist
@@ -283,26 +288,25 @@ class TmtResult:
         file = self._parent.test_data / file
         if not file.exists():
             if not missing_ok:
-                raise FileNotFoundError(f"Log file not found: {file}")
+                msg = f"Log file not found: {file}"
+                raise FileNotFoundError(msg)
             return log_entry
         if do_copy:
             shutil.copy(file, self._parent.test_data / log_entry)
         return log_entry
 
-    def add_file(self, file: Path, missing_ok: bool = False) -> None:
+    def add_file(self, file: Path, *, missing_ok: bool = False) -> None:
         """
         Add a file as a log entry to the results.
 
-        :param file: path to the log file. If it is an absolute path the file is first copied
-          to ``TMT_TEST_DATA``
-        :param missing_ok: add the log entry even if ``file`` is missing, otherwise the log
-          entry is skipped if ``file`` is missing
+        :param file: path to the log file. If it is an absolute path the file is first
+          copied to ``TMT_TEST_DATA``
+        :param missing_ok: add the log entry even if ``file`` is missing, otherwise the
+          log entry is skipped if ``file`` is missing
         """
-        try:
+        # We are fine to do nothing if file is missing
+        with contextlib.suppress(FileNotFoundError):
             self.log.append(self._copy_log_file(file, missing_ok=missing_ok))
-        except FileNotFoundError:
-            # File is missing, but we are fine to do nothing
-            pass
 
     def add_main_log(self, file: Path) -> None:
         """
@@ -311,7 +315,7 @@ class TmtResult:
         try:
             self.log.insert(0, self._copy_log_file(file))
         except FileNotFoundError:
-            logger.warning(f"Main log file not found: {file}")
+            logger.warning("Main log file not found: %s", file)
 
     def add_viewer_html(self, file: Path) -> None:
         """

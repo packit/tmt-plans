@@ -1,14 +1,16 @@
 #!/usr/bin/python3
+from __future__ import annotations
 
-import sys
-import os
-import subprocess
-import shutil
-from pathlib import Path
-import logging
 import json
-import tomli_w
+import logging
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
 from typing import Any
+
+import tomli_w
 
 from utils import Result, TestEnv
 
@@ -29,9 +31,11 @@ FEDORA_REVIEW_RESULTS = [
 ]
 
 
-def dump_results_yaml(test_env: TestEnv, issues: int, skipped: int):
+def dump_results_yaml(test_env: TestEnv, issues: int, skipped: int) -> None:
     """
-    https://tmt.readthedocs.io/en/stable/spec/results.html
+    Dump results.
+
+    See https://tmt.readthedocs.io/en/stable/spec/results.html
     """
     test_env.main_result.result = Result.FAIL if issues else Result.PASS
     test_env.main_result.note = [
@@ -46,17 +50,18 @@ def dump_results_yaml(test_env: TestEnv, issues: int, skipped: int):
 
 def copy_fedora_review_results(test_env: TestEnv) -> None:
     """
-    Copy fedora-review logs and results to the result directory
+    Copy fedora-review logs and results to the result directory.
     """
     fedora_review_resultdir = test_env.workdir / f"review-{test_env.srpm_name}"
-    log.info(os.listdir(fedora_review_resultdir))
+    log.info(fedora_review_resultdir.iterdir())
     for name in FEDORA_REVIEW_RESULTS:
         test_env.main_result.add_file(fedora_review_resultdir / name, missing_ok=True)
 
 
-def copy_mock_fedora_ci_toml(test_env: TestEnv):
+def copy_mock_fedora_ci_toml(test_env: TestEnv) -> None:
     """
-    Copy a mock fedora-ci.toml to the plan data directory
+    Copy a mock fedora-ci.toml to the plan data directory.
+
     This is only for development purposes. In production a package either has
     a fedora-ci.toml configuration in its repository or it doesn't. Either way,
     we don't want to copy it from anywhere else.
@@ -78,7 +83,7 @@ def rpm_disttag(path: Path) -> str | None:
 
 def fedora_review(test_env: TestEnv) -> dict[str, Any]:
     """
-    Run fedora-review
+    Run fedora-review.
     """
     env = os.environ.copy()
     env["REVIEW_NO_MOCKGROUP_CHECK"] = "true"
@@ -103,17 +108,19 @@ def fedora_review(test_env: TestEnv) -> dict[str, Any]:
         check=True,
     )
 
-    path = os.path.join(test_env.workdir, "review-" + name, "review.json")
-    if not os.path.exists(path):
-        raise RuntimeError(f"Result JSON doesn't exist: {path}")
+    path = test_env.workdir / f"review-{name}/review.json"
+    if not path.exists():
+        msg = f"Result JSON doesn't exist: {path}"
+        raise RuntimeError(msg)
     log.info("Result: %s", path)
 
-    with open(path, "r") as fp:
+    with path.open() as fp:
         review = json.load(fp)
+    assert isinstance(review, dict)
     return review
 
 
-def skip_checks(config):
+def skip_checks(config: dict[str, Any]) -> list[str]:
     skip_for_all = [
         # A package with this name obviously already exists in the Fedora
         # repositories and this is that package. Check for a name conflict only
@@ -136,27 +143,32 @@ def skip_checks(config):
     return skip_for_all + skip_for_package
 
 
-def dump_fedora_review_config(test_env: TestEnv, fedora_review_config):
+def dump_fedora_review_config(
+    test_env: TestEnv,
+    fedora_review_config: dict[str, Any],
+) -> None:
     with (test_env.workdir / FEDORA_REVIEW_TOML).open("wb") as fp:
         tomli_w.dump(fedora_review_config, fp)
 
 
 def main(test_env: TestEnv) -> None:
     """
-    Run fedora-review plan
+    Run fedora-review plan.
     """
     if not test_env.spec_file:
-        raise RuntimeError("No spec file provided")
+        msg = "No spec file provided"
+        raise RuntimeError(msg)
 
     if not test_env.rpms:
-        raise RuntimeError("No RPM files provided")
+        msg = "No RPM files provided"
+        raise RuntimeError(msg)
 
     # At this point, the RPM packages are already downloaded in `args.workdir`,
     # we just need to copy the .spec next to them
     shutil.copy(test_env.spec_file, test_env.workdir)
 
     # Uncomment if needed for development purposes
-    # copy_mock_fedora_ci_toml()
+    # copy_mock_fedora_ci_toml()  # noqa: ERA001
 
     # Parse the `fedora-review config` aout of the `fedora-ci.toml`, update
     # the list of excluded checks and save it as `fedora-review.toml`.
@@ -190,5 +202,5 @@ if __name__ == "__main__":
         log.error("Fedora-review failed!")
         sys.exit(1)
     except Exception as ex:
-        log.error("Unexpected error!", exc_info=ex)
+        log.exception("Unexpected error!", exc_info=ex)
         sys.exit(2)

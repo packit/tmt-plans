@@ -1,0 +1,44 @@
+[tool.ruff]
+# To support as early as epel9
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "ALL",
+]
+ignore = [
+    "B019",  # cached instance method
+    "CPY001",  # missing copyright notice
+    "D105",  # undocumented magic method
+    "D107",  # undocumented public init
+    "D200",  # unnecessary multiline docstring
+    "ICN001",  # unconventional import alias
+    "FIX002",  # line contains todo
+    "S101",  # assert
+    "S113",  # request without timeout
+    "S603",  # subprocess without shell equals true
+    "S607",  # start process with partial path
+    "TD",  # flake8-todos
+    "TRY400",  # error instead of exception
+]
+pydocstyle.convention = "pep257"
+pycodestyle.max-line-length = 100
+flake8-tidy-imports.banned-module-level-imports = [
+    "copr",
+    "requests",
+    "ruamel.yaml",
+    "tomli",
+    "tomli-w",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = [
+    "D100",  # undocumented public module
+    "D103",  # undocumented public function
+    "TID253",  # banned module level imports
+]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+explicit_package_bases = true
