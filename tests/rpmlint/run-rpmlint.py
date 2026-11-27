@@ -10,7 +10,6 @@ import logging
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
 
 import tomli_w
 
@@ -38,15 +37,13 @@ def prepare(env: TestEnv) -> None:
     env.get_rpms()
     rpmlint_data_dir = env.workdir / "rpmlint"
     rpmlint_data_dir.mkdir(exist_ok=True)
-    for toml_file in RPMLINT_TOML_FILES:
-        shutil.copy(toml_file, rpmlint_data_dir)
+    for file in RPMLINT_TOML_FILES:
+        shutil.copy(file, rpmlint_data_dir)
     if config := env.get_config(CI_CONFIG_SECTION):
         if rc_content := config.get("rc"):
-            rc_content: str
             rc_file = rpmlint_data_dir / "rpmlintrc"
             rc_file.write_text(rc_content)
         if toml_content := config.get("toml"):
-            toml_content: dict[str, Any]
             toml_file = rpmlint_data_dir / "rpmlint.toml"
             with toml_file.open("wb") as f:
                 tomli_w.dump(toml_content, f)
@@ -66,7 +63,7 @@ def main(env: TestEnv) -> None:
     """
     Run rpmlint.
     """
-    rpmlint_args = []
+    rpmlint_args: list[str | Path] = []
     if rc_file:
         rpmlint_args.extend(["-r", rc_file])
     rpmlint_args.extend(["-c", env.workdir / "rpmlint"])

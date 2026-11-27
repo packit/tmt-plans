@@ -115,7 +115,9 @@ def fedora_review(test_env: TestEnv) -> dict[str, Any]:
     log.info("Result: %s", path)
 
     with path.open() as fp:
-        return json.load(fp)
+        review = json.load(fp)
+    assert isinstance(review, dict)
+    return review
 
 
 def skip_checks(config: dict[str, Any]) -> list[str]:

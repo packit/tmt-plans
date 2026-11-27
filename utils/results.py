@@ -136,7 +136,7 @@ class Results(Mapping[str, "TmtResult"]):
                 raise ValueError(msg)
             self._results[key] = value
         elif isinstance(value, str):
-            result = Result(value)
+            result = Result(value)  # type: ignore[arg-type]
             self._results[key].result = result
         elif isinstance(value, Result):
             self._results[key].result = value
@@ -226,7 +226,7 @@ class TmtResult:
     @result.setter
     def result(self, value: str | Result) -> None:
         if isinstance(value, str):
-            self._result = Result(value)
+            self._result = Result(value)  # type: ignore[arg-type]
         elif isinstance(value, Result):
             self._result = value
         else:
@@ -269,7 +269,8 @@ class TmtResult:
         """
         Finish measuring the test duration.
         """
-        self._stopwatch.end = datetime.datetime.now(tz=datetime.UTC)
+        assert self._stopwatch is not None
+        self._stopwatch.end = datetime.datetime.now(tz=datetime.timezone.utc)
         self.duration = self._stopwatch.format()
 
     def _copy_log_file(self, file: Path, *, missing_ok: bool = False) -> str:

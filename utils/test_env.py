@@ -254,6 +254,7 @@ class TestEnv(abc.ABC):
         if not (config := tools.get(section)):
             logger.info("No `tools.%s` section found", section)
             return None
+        assert isinstance(config, dict)
         return config
 
     @classmethod
@@ -334,6 +335,7 @@ class KojiTestEnv(TestEnv):
             raise SystemExit(1)
         source = source_match_obj.group(1)
         source_match = re.search(r"git\+(?P<url>.*)#(?P<ref>.*)", source)
+        assert source_match is not None
         repo_url = source_match.group("url")
         repo_ref = source_match.group("ref")
 
